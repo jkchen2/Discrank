@@ -1,0 +1,166 @@
+
+==== Command Syntax ====
+
+Here's what a new command looks like:
+([], [])
+More reference:
+commands['<command>'] = ([<blueprints>], [<aliases>])
+
+This is a touple of two lists. The first list contains a list of blueprints.
+    Each blueprint has the format:
+        "<optional flag><option><positional argument flag>"
+    The optional flag is either nothing or "?". If the question mark is there,
+        the option is marked as, well, optional. Similarly, the positional
+        argument flag is either nothing or ":". If the colon is there, the
+        argument directly after the option is required, and is then set to be
+        associated with that option.
+
+For trailing arguments that are not associated with an option, use a space
+    and specify the arguments using ONE of these symbols:
+        "^" - Groups all trailing arguments as a single required argument
+        "&" - Same as above, except optional
+
+Alternatively, if the arguments need to be separated by space/quotes, use ONE
+    of these symbols:
+        "+" - All further arguments are separated by spaces/quotes, at least
+            one argument is required
+        "#" - Same as above, except optional
+
+For the symbols above ("+" and "#"), you can also specify a number of required
+    trailing arguments immediately before the symbol by adding ":". For
+    example:
+        "::+" - Requires at least three arguments, all separated
+        ":::#" - Equivalent to the above example
+
+A few examples:
+    "info" - Simple info flag. Requires no arguments
+    "required:" - A flag with a required positional argument
+    "decide +" - A flag with no positional arguments, but with at least one
+        required trailing argument
+    "edit: ?setprivate ^" - An edit flag with an optional privacy parameter
+        with a grouping of trailing arguments (as to edit the tag, etc.)
+
+Now back to the tuple. The second list contains a list of option aliases. Each
+    alias has the format:
+        ("<full option name>", "<alias 1>", "<alias 2>", "<alias 3>")
+
+A few examples:
+    ("source", "src", "s") - "source" is the full option name
+    ("edit", "e") - "edit" is the full option name
+
+This way, the parser will return a touple structure with a dictionary of touples
+    using the FULL option name as a key:
+        {"<full option name>": "<positional argument>"}
+
+==== Shortcut Syntax ====
+
+Here's what a new shortcut looks like:
+('', '')
+More reference:
+shortcuts['<shortcut>'] = ('<full layout>', '<argument symbols>')
+
+Shortcut blueprints are tuple pairs. The first element is the full command
+    that will be associated with the command. The second is a string of
+    argument parsing parameters (same ones described before). Shortcuts are
+    added like regular commands, but are in their own dictionary.
+
+If a shortcut is specified, the input will be read according to the argument
+    symbols given. When it is parsed, the result will be formatted into the
+    blueprint associated with the shortcut. Finally, it will be sent through
+    the parser once more in the full form.
+
+A few examples:
+    shortcuts["clear"] = ("mod -clear", "") - Does not accept arguments. Simply
+        typing "!clear" as the command will execute "!mod -clear"
+    ["tc"] = ("tag -create {} {}", ":^") - Accepts a single argument, and then
+        the rest of the arguments are grouped together. Elements are formatted
+        in the order of the curly braces
+    ["tr"] = ("tag -remove {}", "^") - All arguments given are used as a single
+        required groped argument. Note that if "^" is used, no quotes will be
+        used to wrap the combined argument
+    ["pick"] = ("random -pick {} {}", ":+") - At least two arguments required.
+        All arguments are automatically separated by spaces, with quotes
+        wrapping them for safety
+
+==== Return Value ====
+
+Here's what the return value looks like:
+('', 0, {}, [])
+
+The full return value will include the blueprint number (index of the blueprint
+    in the blueprint list). It will have four components as a touple:
+        (<base command name>,
+        <blueprint number>,
+        {<option key/value pairs as a dictionary>},
+        [<trailing arguments as a list>])
+
+The first element of the touple is the base command. This is affected by the
+    aliases given. For example:
+        "!tag ..." - Base command is "tag"
+        "!t ..." - Base command is still "tag" (changed based on aliases)
+
+The second element is the blueprint index. This makes getting the proper
+    response much easier, as the bulk of the parsing and syntax checking is
+    done via the parser. For example, if we have the following command:
+        commands["base"] = (["version"], ["source"], ["uptime"])
+    The parser will return the blueprint number it first matches. For example:
+        "!base -version" - Blueprint number returned will be 0
+        "!base -uptime" - Blueprint number returned will be 2
+
+The third element is the options dictionary. It holds all options found, along
+    with the positional argument attached to it if it is found in the blueprint.
+    For example:
+        "!tag -search mytag" - Dictionary will be {"search": "mytag"}
+        "!wa -simple query" - Dictionary will be {"simple": ""} (In this case,
+            the "simple" option is only a flag)
+
+The last element contains all of the remaining trailing arguments as specified
+    by the trailing argument parsing symbols (specified earlier on) as a list.
+    For example:
+        "!pick dog cat fish" - List will be ["dog", "cat", "fish"] (In this
+            case, trailing arguments were required as a list)
+        "!wa 21 c to f" - List will be ["21 c to f"] (In this case, trailing
+            arguments were required to be bundled as a single argument)
+    
+==== Errors ====
+
+In the event of a parsing error (user put in an unclosed quote, incorrect
+    number of arguments, wrong options, etc.), a recoverable BotException
+    will be raised, stopping the parsing process. However, with blueprints,
+    there is minimal error checking as to streamline the process of parsing
+    commands. Please ensure that the commands are following the proper syntax,
+    otherwise there can be undefined behavior. The same applies for shortcuts.
+    See below for some more complete examples.
+
+==== Examples ====
+
+Blueprint (#0): "&"
+Alias list: []
+Input: !ping pong
+Return ("ping", 0, {}, ["pong"])
+
+Blueprint (#0): "create: ?private ^"
+Alias list (relevant only): [("create", "c"), ("private", "p"), ...]
+Input: !tag -create "my tag" -p This is my tag text
+Return: ("tag", 0, {"create": "my tag", "private": "")}, "This is my tag text")
+
+Blueprint (#4): "?results: ^"
+Alias list (relevant only): [("wolfram", "wa"), ("results", "r", "num"), ...]
+Input: !wa -r=5 north america
+Return: ("wolfram", 4, {"results": "5"}, "north america")
+
+Blueprint (#2): "pick :+"
+Alias list (relevant only): [("pick", "p", "decide", "fluky")]
+Input: !random -pick pizza "hot dog" burger
+Return: ("random", 2, {"pick": ""}, ["pizza", "hot dog", "burger"])
+
+Shortcut Blueprint: ["clear"] = ("mod -clear", "")
+Alias list (relevant only): [("clear", "c"), ...]
+Input: !clear
+Return: ("mod", 5, {"clear": ""}, [])
+
+Shortcut Blueprint: ["swa"] = ("wolfram -simple {}", "^")
+Alias list (relevant only): [...]
+Input: !swa time in Australia
+Return: ("wolfram", 1, {"simple": ""}, "time in Australia")
+
