@@ -5,23 +5,21 @@ import re
 from jshbot import commands
 from jshbot.exceptions import BotException, ErrorTypes
 
-# Input: "-create "my tag" -private tag text"
-# ['-create', ' ', '"my', ' ', 'tag"', ' ', '-private', ' ', 'tag', ' ', 'text', '-']
-# len is 7, want to go from [0, 5]
-
 EXCEPTION = "Parser"
 
 def get_argument_block(split, index, get_all=False):
-    #print("Starting from index " + str(index) + ": " + split[index])
     if not split[index] or split[index][0] == ' ': # Unstripped, skip
         return get_argument_block(split, index + 1)
     elif not get_all and split[index][0] == '-': # This is an option
         return None
     elif split[index][0] == '"': # Loop until quote closed
-        combined = split[index][1:]
-        for it in range(index + 1, len(split) - 1):
+        combined = ''
+        for it in range(index, len(split) - 1):
             if split[it][-1] == '"' and split[it][-2] != '\\': # Closed
-                return (combined + split[it][:-1], it)
+                if it > index:
+                    return (combined[1:] + split[it][:-1], it)
+                else:
+                    return (split[it][1:-1], it)
             combined += split[it]
         raise BotException(ErrorTypes.RECOVERABLE, EXCEPTION,
                 "Detected an unclosed quote", split[index])
@@ -32,7 +30,6 @@ def split_parameters(parameters):
 
     split = re.split('( )', parameters)
     split.append('-')
-    print(split)
     pairs = {} # {op1: arg1, op2: arg2} ("op1: op2: +")
     leftover_arguments = [] # [arg3, arg4]
     trailing_arguments = [] # [arg2, arg3, arg4]
@@ -100,8 +97,6 @@ def match_blueprint(options, arguments, last_option, blueprints):
     
     # Loop through all blueprints
     # Each blueprint is a list of individual plans
-    print("List of blueprints: " + str(blueprints))
-    print("Current options dictionary: " + str(options))
     for blueprint_index, blueprint in enumerate(blueprints):
 
         # Represents if the last option with an associated positional argument
@@ -222,6 +217,7 @@ def fill_shortcut(parameters, blueprint, modifiers):
 
         if modifier == ':': # Insert single argument
             block, it = get_argument_block(split, it, get_all=True)
+            print("Trying to add single argument: " + block)
             format_list.append('"' + block + '"')
         else: # Insert remaining trailing arguments
             remaining = ''
@@ -263,12 +259,8 @@ def parse(bot, base, parameters, command_pair, shortcut):
     parameters = parameters.strip() # Safety strip
 
     if shortcut: # Check blueprint for layout
-        try: # TODO: Maybe change this exception handling
-            base, parameters = fill_shortcut(
-                bot, parameters, command_pair[0], command_pair[1])
-        except:
-            raise BotException(ErrorTypes.RECOVERABLE, EXCEPTION,
-                    "Invalid syntax", bot.commands['syntax'][base])
+        base, parameters = fill_shortcut(
+            parameters, command_pair[0], command_pair[1])
         command_pair, shortcut = commands.get_command_pair(bot, base)
         return parse(bot, base, parameters, command_pair, shortcut)
     else:

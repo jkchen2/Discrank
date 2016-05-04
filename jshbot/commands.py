@@ -4,26 +4,92 @@ import sys
 
 from jshbot.exceptions import BotException, ErrorTypes
 
-def convert_command_blueprints(blueprints):
+EXCEPTION = 'Commands'
+
+def convert_plans(plans):
     '''
-    Converts user-friendly(ish) blueprints into the system-friendly version.
+    Converts user-friendly(ish) plans into the system-friendly version.
     Convert: "?opt1 opt2: ::+"
     To: [[(True, "opt1", False), (False, "opt2", True)], '::+']
+    Convert: "*"
+    To: [[], '*']
     '''
-    new_blueprints = []
+    new_plans = []
     required = True
     argument = False
-    for blueprint in blueprints:
-        split = blueprint.split()
-        new_blueprint = [[], '']
-        for block in split:
+    for plan in plans: # Convert each individual plan
+        split = plan.split()
+        new_plan = [[], '']
+        for block in split: # Parse each option
             if block[0] in (':', '^', '&', '+', '#'): # Last part
-                new_blueprint[1] = block
+                new_plan[1] = block
                 break
             required = block[0] == '?'
             argument = block[-1] == ':'
             block = block.strip('?').strip(':')
-            new_blueprint[0].append((required, block, argument))
-        new_blueprints.append(new_blueprint)
-    return new_blueprints
+            new_plan[0].append((required, block, argument))
+        new_plans.append(new_plan)
+    return new_plans
+
+def add_commands(bot, new_commands, plugin):
+    '''
+    Checks that all keys in the new dictionary are unique from those in the old
+    dictionary. If all keys are good, add them to the bot commands dictionary
+    '''
+    # No shortcuts
+    if not new_commands:
+        return
+
+    # Check that there are no command name collisions
+    for key in new_commands:
+        is_shortcut = type(new_commands[key][0]) is str
+        if key in bot.commands:
+            raise BotException(ErrorTypes.FATAL, EXCEPTION,
+                    "Attempting to add a command that already exists", key)
+        if is_shortcut:
+            bot.commands[key] = new_commands[key]
+        else:
+            new_plans = convert_plans(new_commands[key][0]) # Convert and add
+            bot.commands[key] = ((new_plans, new_commands[key][1]), plugin)
+        bot.commands['syntax'][key] = "Nothing for now on " + key
+
+def get_command_pair(bot, base):
+    '''
+    Returns a touple of the command pair with the given base and whether or not
+    it is a shortcut.
+    '''
+    try:
+        is_shortcut = type(bot.commands[base][0]) is str
+        if is_shortcut:
+            command_pair = bot.commands[base]
+        else:
+            command_pair = bot.commands[base][0]
+        print("get_command_pair is returning this: " + str(command_pair))
+        print("and this is a shortcut: " + str(is_shortcut))
+        return (command_pair, is_shortcut)
+    except KeyError:
+        return (None, None)
+
+
+def execute(bot, message, parsed_command):
+    '''
+    Gets the proper response for the parsed command by first getting the plugin,
+    then calling the get_response function associated with that plugin.
+    '''
+    # Get plugin
+    print("This is the parsed command: " + str(parsed_command))
+    base = parsed_command[0]
+    print("This is bot.commands[base]: " + str(bot.commands[base]))
+    plugin_name = bot.commands[base][1]
+    plugin = bot.plugins[plugin_name]
+
+    # Execute plugin's get_response
+    return plugin.get_response(bot, message, parsed_command)
+
+
+
+
+
+
+
 

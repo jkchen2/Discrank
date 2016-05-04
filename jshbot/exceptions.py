@@ -1,5 +1,6 @@
 import discord
 import logging
+import sys
 
 from enum import Enum
 
@@ -9,7 +10,7 @@ class ErrorTypes(Enum):
 
 class BotException(Exception):
 
-    def __init__(self, error_type, error_subject, error_details, *args):
+    def __init__(self, error_type, error_subject, error_details, *args, e=None):
         self.error_type = error_type
         self.error_subject = str(error_subject)
         self.error_details = str(error_details)
@@ -18,15 +19,19 @@ class BotException(Exception):
         for detail in args:
             other_details += '{}\n'.format(detail)
         self.error_message = "`{subject} error: {details}`\n{others}".format(
-                subject = self.error_type,
+                subject = self.error_subject,
                 details = self.error_details,
                 others = other_details)
+        if e:
+            self.error_message += '\nGiven error:\n{}'.format(str(e))
 
         logging.error(self.error_message)
 
         # If non-recoverable, quit
-        if error_type >= ErrorTypes.STARTUP:
-            os.exit()
+        if error_type in (ErrorTypes.STARTUP, 
+                ErrorTypes.FATAL, 
+                ErrorTypes.INTERNAL):
+            sys.exit()
             
     def __str__(self):
         return self.error_message

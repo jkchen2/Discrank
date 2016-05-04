@@ -5,14 +5,16 @@ import os.path
 
 from jshbot.exceptions import BotException, ErrorTypes
 
+EXCEPTION = 'Configurations'
+
 def get_configurations(bot):
     configurations_list = {}
-    directory = bot.path + "/config"
+    directory = bot.path + '/config'
     try:
-        with open(bot_directory + '/config.json', 'r') as config_file:
+        with open(directory + '/config.json', 'r') as config_file:
             configurations_list['core'] = json.load(config_file)
-    except:
+    except Exception as e:
         raise BotException(ErrorTypes.FATAL, EXCEPTION,
-                "Could not open the core configuration file")
+                "Could not open the core configuration file", e=e)
 
     return configurations_list

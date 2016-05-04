@@ -3,21 +3,32 @@ import discord
 import logging
 import os.path
 
+import sys
+
+from jshbot.exceptions import ErrorTypes, BotException
+
+EXCEPTION = 'Servers'
+
 def get_servers_data(bot):
     directory = bot.path + "/data"
     try:
         with open(bot_directory + '/servers.json', 'r') as servers_file:
+            thingy = json.load(servers_file)
+            print("This is the server data: " + str(thingy))
+            #sys.exit()
             return json.load(servers_file)
     except:
         logging.error("Could not open the servers data file")
+        #sys.exit()
+        return {}
 
 def add_server(bot, server):
     # NOTE: Can't use sets because they aren't JSON serializable :c
     bot.servers_data[server.id] = {
             'muted':False,
-            'muted_channels':{},
-            'moderators':{},
-            'blocked':{}
+            'muted_channels':[],
+            'moderators':[],
+            'blocked':[]
             }
 
 def update_server_information(bot, server, **kwargs):
