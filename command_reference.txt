@@ -134,33 +134,33 @@ In the event of a parsing error (user put in an unclosed quote, incorrect
 
 ==== Examples ====
 
-Blueprint (#0): "&"
+Blueprint (#0): '&'
 Alias list: []
 Input: !ping pong
-Return ("ping", 0, {}, ["pong"])
+Return ('ping', 0, {}, ['pong'])
 
-Blueprint (#0): "create: ?private ^"
-Alias list (relevant only): [("create", "c"), ("private", "p"), ...]
-Input: !tag -create "my tag" -p This is my tag text
-Return: ("tag", 0, {"create": "my tag", "private": "")}, "This is my tag text")
+Blueprint (#0): 'create: ?private ^'
+Alias list (relevant only): [('create', 'c'), ('private', 'p'), ...]
+Input: !tag -create 'my tag' -p This is my tag text
+Return: ('tag', 0, {'create': 'my tag', 'private': '')}, 'This is my tag text')
 
-Blueprint (#4): "?results: ^"
-Alias list (relevant only): [("wolfram", "wa"), ("results", "r", "num"), ...]
-Input: !wa -r=5 north america
-Return: ("wolfram", 4, {"results": "5"}, "north america")
+Blueprint (#4): '?results: ^'
+Alias list (relevant only): [('wolfram', 'wa'), ('results', 'r', 'num'), ...]
+Input: !wa -r 5 north america
+Return: ('wolfram', 4, {'results': '5'}, 'north america')
 
-Blueprint (#2): "pick :+"
-Alias list (relevant only): [("pick", "p", "decide", "fluky")]
-Input: !random -pick pizza "hot dog" burger
-Return: ("random", 2, {"pick": ""}, ["pizza", "hot dog", "burger"])
+Blueprint (#2): 'pick :+'
+Alias list (relevant only): [('pick', 'p', 'decide', 'fluky')]
+Input: !random -pick pizza 'hot dog' burger
+Return: ('random', 2, {'pick': ''}, ['pizza', 'hot dog', 'burger'])
 
-Shortcut Blueprint: ["clear"] = ("mod -clear", "")
-Alias list (relevant only): [("clear", "c"), ...]
+Shortcut Blueprint: ['clear'] = ('mod -clear', '')
+Alias list (relevant only): [('clear', 'c'), ...]
 Input: !clear
-Return: ("mod", 5, {"clear": ""}, [])
+Return: ('mod', 5, {'clear': ''}, [])
 
-Shortcut Blueprint: ["swa"] = ("wolfram -simple {}", "^")
+Shortcut Blueprint: ['swa'] = ('wolfram -simple {}', '^')
 Alias list (relevant only): [...]
 Input: !swa time in Australia
-Return: ("wolfram", 1, {"simple": ""}, "time in Australia")
+Return: ('wolfram', 1, {'simple': ''}, 'time in Australia')
 
