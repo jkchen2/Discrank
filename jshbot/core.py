@@ -12,12 +12,18 @@ EXCEPTION = 'Core'
 
 class Bot(discord.Client):
     
-    def __init__(self):
-        self.version = '0.3.0 alpha preview'
-        self.date = 'May 3rd, 2016'
+    def __init__(self, debug):
+        self.version = '0.3.0-alpha'
+        self.date = 'May 4th, 2016'
+        self.debug = debug
 
-        logging.debug("=== Starting up JshBot {} ===".format(self.version))
-        logging.debug("=== Time: {} ===".format(time.strftime("%s")))
+        if self.debug:
+            logging.debug("=== Starting up JshBot {} ===".format(self.version))
+            logging.debug("=== Time: {} ===".format(time.strftime("%s")))
+        else:
+            print("=== Starting up JshBot {} ===".format(self.version))
+            print("=== Time: {} ===".format(time.strftime("%s")))
+
         super().__init__()
 
         self.path = os.path.split(os.path.realpath(__file__))[0][:-7]
@@ -27,15 +33,23 @@ class Bot(discord.Client):
         self.configurations = configurations.get_configurations(self)
         logging.debug("Loading plugins and commands...")
         self.commands = {}
+        self.manual = {}
         self.plugins = plugins.get_plugins(self)
         logging.debug("Loading server data...")
         self.servers_data = servers.get_servers_data(self)
 
         # Extras
-        self.edit_dictionary = []
+        self.edit_dictionary = {}
     
     def get_token(self):
         return self.configurations['core']['token']
+
+    def usage_reminder(self, base):
+        '''
+        Uses the base module to get the usage reminder for a command.
+        '''
+        base_module = self.plugins['base']
+        return base_module.get_usage_reminder(self, base)
 
     def can_respond(self, message):
         '''
@@ -84,7 +98,7 @@ class Bot(discord.Client):
         base, parameters = split_content
         command_pair, shortcut = commands.get_command_pair(self, base)
         if not command_pair: # Suitable command not found
-            print("Suitable command not found: " + base)
+            logging.debug("Suitable command not found: " + base)
             return
 
         # Bot is clear to get response. Send typing to signify
@@ -93,8 +107,10 @@ class Bot(discord.Client):
 
         # Parse command and reply
         try:
+            print(message.author.name + ': ' + message.content)
             parsed_command = parser.parse(
                     self, base, parameters, command_pair, shortcut)
+            print('\t' + str(parsed_command))
             response = commands.execute(self, message, parsed_command)
         except BotException as e: # Respond with error message
             response = (str(e), False)
@@ -121,7 +137,10 @@ class Bot(discord.Client):
         #logging.debug("Setting bot name...")
         # Set bot name
 
-        logging.debug("=== {} online ===".format(self.user.name))
+        if self.debug:
+            logging.debug("=== {} online ===".format(self.user.name))
+        else:
+            print("=== {} online ===".format(self.user.name))
 
     async def on_server_join(self, server):
         #plugins.on_server_join_broadcast(self, server)
@@ -132,13 +151,28 @@ class Bot(discord.Client):
 
     # TODO: Add other plugin broadcast events
 
-def initialize():
-    #logging.basicConfig(stream=sys.stdout, level=logging.DEBUG)
-    try:
-        bot = Bot()
-        while(1):
-            bot.run(bot.get_token())
-            time.sleep(30)
-    except KeyboardInterrupt:
-        logging.debug("Quiting...")
-        pass
+    def save_data(self):
+        '''
+        Saves all data. For now, this will just be the servers file.
+        '''
+        logging.debug("Saving data...")
+        servers.save_data(self)
+        logging.debug("Saving data complete.")
+
+    def shutdown(self):
+        '''
+        Shuts down the bot.
+        '''
+        logging.debug("Writing data on shutdown...")
+        self.save_data()
+        logging.debug("Closing down!")
+        sys.exit()
+
+def initialize(debug=False):
+    if debug:
+        logging.basicConfig(stream=sys.stdout, level=logging.DEBUG)
+    bot = Bot(debug)
+    bot.run(bot.get_token())
+    logging.error("Bot disconnected. Shutting down...")
+    bot.shutdown()
+

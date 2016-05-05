@@ -24,21 +24,24 @@ def get_plugins(bot):
 
     # Add base plugin
     from jshbot import base
-    command_pairs, shortcuts = base.get_commands()
-    bot.commands['syntax'] = {}
+    command_pairs, shortcuts, manual = base.get_commands()
     commands.add_commands(bot, command_pairs, 'base')
     commands.add_commands(bot, shortcuts, 'base')
+    commands.add_manual(bot, manual)
     valid_plugins['base'] = base
 
     for plugin in plugins_list:
+        if plugin[0] in ('.', '_') or plugin == 'base': # Dang swap files
+            continue
         try:
             spec = importlib.util.spec_from_file_location(
                     plugin, directory + '/{}'.format(plugin))
             module = importlib.util.module_from_spec(spec)
             spec.loader.exec_module(module)
-            command_pairs, shortcuts = module.get_commands()
+            command_pairs, shortcuts, manual = module.get_commands()
             commands.add_commands(bot, command_pairs, plugin)
             commands.add_commands(bot, shortcuts, plugin)
+            commands.add_manual(bot, manual)
         except Exception as e:
             raise BotException(ErrorTypes.STARTUP, EXCEPTION,
                     "Failed to import external plugin", plugin, e=e)

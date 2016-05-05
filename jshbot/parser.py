@@ -217,7 +217,6 @@ def fill_shortcut(parameters, blueprint, modifiers):
 
         if modifier == ':': # Insert single argument
             block, it = get_argument_block(split, it, get_all=True)
-            print("Trying to add single argument: " + block)
             format_list.append('"' + block + '"')
         else: # Insert remaining trailing arguments
             remaining = ''
@@ -233,6 +232,7 @@ def fill_shortcut(parameters, blueprint, modifiers):
 
     # Insert elements from the format list
     filled_blueprint = blueprint.format(*format_list)
+    print("This is the filled blueprint: ", filled_blueprint)
     return filled_blueprint.split(' ', 1)
 
 def replace_aliases(pairs, aliases, last_option):
@@ -280,7 +280,7 @@ def parse(bot, base, parameters, command_pair, shortcut):
     except:
         # Print out the syntax of the command
         raise BotException(ErrorTypes.RECOVERABLE, EXCEPTION,
-                "Invalid syntax", bot.commands['syntax'][base])
+                "Invalid syntax", bot.usage_reminder(base))
     
     # Remove positional argument of last option if it exists in the dictionary
     if no_last_argument and last_option in options:

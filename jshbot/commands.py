@@ -34,7 +34,7 @@ def convert_plans(plans):
 def add_commands(bot, new_commands, plugin):
     '''
     Checks that all keys in the new dictionary are unique from those in the old
-    dictionary. If all keys are good, add them to the bot commands dictionary
+    dictionary. If all keys are good, add them to the bot commands dictionary.
     '''
     # No shortcuts
     if not new_commands:
@@ -51,7 +51,21 @@ def add_commands(bot, new_commands, plugin):
         else:
             new_plans = convert_plans(new_commands[key][0]) # Convert and add
             bot.commands[key] = ((new_plans, new_commands[key][1]), plugin)
-        bot.commands['syntax'][key] = "Nothing for now on " + key
+
+def add_manual(bot, manual):
+    '''
+    Adds the manual entries to the bot manual dictionary.
+    '''
+    # Do practically the same thing for manual entries
+    if not manual: # No manual entry :c
+        return
+    
+    for key in manual:
+        if key in bot.manual:
+            raise BotException(ErrorTypes.FATAL, EXCEPTION,
+                    "Attempting to add a manual entry that already exists", key)
+        else:
+            bot.manual[key] = manual[key]
 
 def get_command_pair(bot, base):
     '''
@@ -64,8 +78,6 @@ def get_command_pair(bot, base):
             command_pair = bot.commands[base]
         else:
             command_pair = bot.commands[base][0]
-        print("get_command_pair is returning this: " + str(command_pair))
-        print("and this is a shortcut: " + str(is_shortcut))
         return (command_pair, is_shortcut)
     except KeyError:
         return (None, None)
@@ -77,9 +89,7 @@ def execute(bot, message, parsed_command):
     then calling the get_response function associated with that plugin.
     '''
     # Get plugin
-    print("This is the parsed command: " + str(parsed_command))
     base = parsed_command[0]
-    print("This is bot.commands[base]: " + str(bot.commands[base]))
     plugin_name = bot.commands[base][1]
     plugin = bot.plugins[plugin_name]
 
