@@ -280,7 +280,7 @@ def parse(bot, base, parameters, command_pair, shortcut):
     except:
         # Print out the syntax of the command
         raise BotException(ErrorTypes.RECOVERABLE, EXCEPTION,
-                "Invalid syntax", bot.usage_reminder(base))
+                "Invalid syntax.", bot.usage_reminder(base))
     
     # Remove positional argument of last option if it exists in the dictionary
     if no_last_argument and last_option in options:

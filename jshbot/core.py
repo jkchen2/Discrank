@@ -4,6 +4,7 @@ import logging
 import os.path
 import time
 import sys
+import os
 
 from jshbot import configurations, plugins, commands, servers, parser
 from jshbot.exceptions import ErrorTypes, BotException
@@ -14,15 +15,17 @@ class Bot(discord.Client):
     
     def __init__(self, debug):
         self.version = '0.3.0-alpha'
-        self.date = 'May 4th, 2016'
+        self.date = 'May 6th, 2016'
+        self.time = int(time.time())
+        self.readable_time = time.strftime('%c')
         self.debug = debug
 
         if self.debug:
             logging.debug("=== Starting up JshBot {} ===".format(self.version))
-            logging.debug("=== Time: {} ===".format(time.strftime("%s")))
+            logging.debug("=== Time: {} ===".format(self.readable_time))
         else:
             print("=== Starting up JshBot {} ===".format(self.version))
-            print("=== Time: {} ===".format(time.strftime("%s")))
+            print("=== Time: {} ===".format(self.readable_time))
 
         super().__init__()
 
@@ -40,6 +43,21 @@ class Bot(discord.Client):
 
         # Extras
         self.edit_dictionary = {}
+
+    def interrupt_say(self, channel_id, message, channel=None):
+        '''
+        Allows plugins to send messages without having to return directly from
+        get_response. This should mostly be avoided, and just used for errors
+        or other immediately relevant notifications.
+        '''
+        if not channel:
+            try:
+                channel = discord.utils.get(
+                        self.get_all_channels(), id=channel_id)
+            except:
+                raise BotException(ErrorTypes.RECOVERABLE, EXCEPTION,
+                        "Server {} could not be found.".format(server_id))
+        self.loop.call_later(0, self.send_message(channel, message))
     
     def get_token(self):
         return self.configurations['core']['token']
@@ -57,24 +75,24 @@ class Bot(discord.Client):
         Checks that the message has text, matches an invoker, and that the
         server/channel/user is not muted or blocked. Admins/moderators override.
         '''
-        author = message.author
-        server_data = self.servers_data[message.server.id]
-
         if (not message.content or 
                 message.content[0] not in 
                     self.configurations['core']['command_invokers']):
             return False
 
+        author_id = message.author.id
+        server_data = self.servers_data[message.server.id]
+
         try:
             # Owners/moderators override everything
             channel_id = message.channel.id
-            if ((author in self.configurations['core']['owners']) or
-                    (author in server_data['moderators'])):
+            if ((author_id in self.configurations['core']['owners']) or
+                    (author_id in server_data['moderators'])):
                 return True
             # Server/channel muted, or user is blocked
             if ((server_data['muted']) or
                     (channel_id in server_data['muted_channels']) or
-                    (author in server_data['blocked'])):
+                    (author_id in server_data['blocked'])):
                 return False
         except KeyError as e: # Bot may not have updated fast enough
             logging.warn("Failed to find server in can_respond(): " + str(e))
@@ -159,10 +177,12 @@ class Bot(discord.Client):
         servers.save_data(self)
         logging.debug("Saving data complete.")
 
+    def restart(self):
+        logging.debug("Attempting to restart the bot...")
+        self.save_data()
+        os.execv(self.path + '/start.py', sys.argv)
+
     def shutdown(self):
-        '''
-        Shuts down the bot.
-        '''
         logging.debug("Writing data on shutdown...")
         self.save_data()
         logging.debug("Closing down!")

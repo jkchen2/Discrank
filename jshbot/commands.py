@@ -82,7 +82,6 @@ def get_command_pair(bot, base):
     except KeyError:
         return (None, None)
 
-
 def execute(bot, message, parsed_command):
     '''
     Gets the proper response for the parsed command by first getting the plugin,
@@ -92,14 +91,8 @@ def execute(bot, message, parsed_command):
     base = parsed_command[0]
     plugin_name = bot.commands[base][1]
     plugin = bot.plugins[plugin_name]
+    direct = message.channel.is_private
 
     # Execute plugin's get_response
-    return plugin.get_response(bot, message, parsed_command)
-
-
-
-
-
-
-
+    return plugin.get_response(bot, message, parsed_command, direct)
 

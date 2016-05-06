@@ -19,7 +19,7 @@ def get_commands():
 
     return (new_commands, new_shortcuts, None)
 
-def get_response(bot, message, parsed_command):
+def get_response(bot, message, parsed_command, direct):
 
     response = ''
     tts = False
