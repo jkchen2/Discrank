@@ -96,6 +96,9 @@ def add_server(bot, server):
             'blocked':[]
             }
 
+def remove_server(bot, server):
+    del bot.servers_data[server.id]
+
 def update_server_information(bot, server, **kwargs):
     try:
         bot.servers_data[server.id].update(kwargs)

@@ -3,10 +3,14 @@ import random
 import socket
 import time
 
+# For debugging
+import re, json, os, time, requests
+
 from jshbot import servers
 from jshbot.exceptions import ErrorTypes, BotException
 
 EXCEPTION = 'Base'
+local_dictionary = {}
 
 def get_commands():
     '''
@@ -77,7 +81,7 @@ def get_commands():
 
     return (commands, shortcuts, manual)
 
-def get_response(bot, message, parsed_command, direct):
+async def get_response(bot, message, parsed_command, direct):
 
     response = ''
     tts = False
@@ -176,7 +180,7 @@ def get_response(bot, message, parsed_command, direct):
                     "You must be a moderator to use these commands.")
 
     elif base == 'owner':
-        if message.author.id in bot.configurations['core']['owners']:
+        if servers.is_owner(bot, message.author.id):
 
             if plan_index == 0: # halt
                 bot.interrupt_say(
@@ -188,7 +192,7 @@ def get_response(bot, message, parsed_command, direct):
                 bot.restart()
             elif plan_index == 2: # ip
                 s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-                s.connect(('8.8.8.8', 80)) # Thanks Google, you da real MVP
+                s.connect(('8.8.8.8', 80)) # Thanks Google
                 ip = s.getsockname()[0]
                 s.close()
                 response = "Local IP: " + ip
@@ -199,10 +203,55 @@ def get_response(bot, message, parsed_command, direct):
                     "You must be the bot owner to use these commands.")
 
     elif base == 'debug':
-        response = "You get the point: " + str(parsed_command)
-            
+        if servers.is_owner(bot, message.author.id):
+            if plan_index == 0: # Plugin information
+                if options['plugin'] not in bot.plugins:
+                    raise BotException(ErrorTypes.RECOVERABLE, EXCEPTION,
+                            "{} not found.".format(options['plugin']))
+                response = "```\nPlugin information for: {}\n{}\n```".format(
+                    options['plugin'], dir(bot.plugins[options['plugin']]))
+            elif plan_index == 1: # List plugins
+                response = '```\n{}\n```'.format(str(list(bot.plugins.keys())))
+            elif plan_index == 2: # Eval/exec whatever works
+                global local_dictionary
+                if not local_dictionary:
+                    local_dictionary['bot'] = bot
+                pass_in = (globals(), local_dictionary)
+                try:
+                    if arguments[0] == '`' and arguments[-1] == '`':
+                        arguments = arguments[1:-1]
+                    print("These are the arguments: " + arguments)
+                    assignable_code = 'result = (' + arguments + ')'
+                    use_await = arguments.startswith('await')
+                    try:
+                        if use_await:
+                            await exec(assignable_code, *pass_in)
+                        else:
+                            exec(assignable_code, *pass_in)
+                    except SyntaxError: # May need to get rid of result
+                        if use_await:
+                            await exec(arguments, *pass_in)
+                        else:
+                            exec(arguments, *pass_in)
+                        local_dictionary['result'] = 'Executed. (no output)'
+                except Exception as e:
+                    response = '`Error: {}`'.format(str(e))
+                else:
+                    if not local_dictionary['result']:
+                        result = 'Executed. (returned None)'
+                    else:
+                        result = str(local_dictionary['result'])
+                    if len(result) >= 1998:
+                        raise BotException(ErrorTypes.RECOVERABLE, EXCEPTION,
+                                "Exec result is too long.")
+                    response = '`{}`'.format(result)
+            elif plan_index == 3:
+                response = "Not in quite yet, sorry."
+        else:
+            raise BotException(ErrorTypes.RECOVERABLE, EXCEPTION,
+                    "You must be a bot owner to use these commands.")
     else:
-        response = "Your command was: " + base
+        response = "This should not be seen. Your command was: " + base
 
     return (response, tts, message_type, extra)
 
@@ -210,6 +259,11 @@ def get_help(bot, base, topic=None):
     '''
     Gets the help of the base command, or the specific topic of a help command.
     '''
+
+    # Check for shortcut first
+
+    #if base in bot.commands and commands
+
     if base not in bot.manual:
         return "No help entry for this command."
     manual_entry = bot.manual[base]
@@ -274,4 +328,19 @@ def get_usage_reminder(bot, base):
         response += '\t({}) {}\n'.format(topic_index + 1, topic[0])
     response += '```'
     return response
+
+async def on_server_remove(bot, server):
+    print("Removing a server")
+    servers.remove_server(bot, server)
+
+async def on_server_join(bot, server):
+    # Add server to the list
+    print("Joining server")
+    servers.add_server(bot, server)
+
+async def on_ready(bot):
+    print("on_ready from base.py!")
+
+async def on_message(bot, message):
+    print("on_message from base.py!: " + str(message.content))
 

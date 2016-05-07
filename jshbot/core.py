@@ -57,7 +57,7 @@ class Bot(discord.Client):
             except:
                 raise BotException(ErrorTypes.RECOVERABLE, EXCEPTION,
                         "Server {} could not be found.".format(server_id))
-        self.loop.call_later(0, self.send_message(channel, message))
+        asyncio.ensure_future(self.send_message(channel, message))
     
     def get_token(self):
         return self.configurations['core']['token']
@@ -66,7 +66,7 @@ class Bot(discord.Client):
         '''
         Uses the base module to get the usage reminder for a command.
         '''
-        base_module = self.plugins['base']
+        base_module = self.plugins['base'][0]
         return base_module.get_usage_reminder(self, base)
 
     def can_respond(self, message):
@@ -103,7 +103,7 @@ class Bot(discord.Client):
         return True # Clear to respond
 
     async def on_message(self, message):
-        plugins.on_message_broadcast(self, message)
+        plugins.broadcast_event(self, 2, message)
 
         # Ensure bot can respond properly
         if not self.can_respond(message):
@@ -129,9 +129,9 @@ class Bot(discord.Client):
             parsed_command = parser.parse(
                     self, base, parameters, command_pair, shortcut)
             print('\t' + str(parsed_command))
-            response = commands.execute(self, message, parsed_command)
+            response = await (commands.execute(self, message, parsed_command))
         except BotException as e: # Respond with error message
-            response = (str(e), False)
+            response = (str(e), False, 0, None)
         message_reference = await self.send_message(
                 message.channel, response[0], tts=response[1])
 
@@ -147,7 +147,7 @@ class Bot(discord.Client):
         
 
     async def on_ready(self):
-        plugins.on_ready_broadcast(self)
+        plugins.broadcast_event(self, 0)
 
         # Make sure server data is ready
         servers.check_all(self)
@@ -160,11 +160,50 @@ class Bot(discord.Client):
         else:
             print("=== {} online ===".format(self.user.name))
 
+    async def on_error(self, event, *args, **kwargs):
+        plugins.broadcast_event(self, 1, event, *args, **kwargs)
+    async def on_socket_raw_receive(self, msg):
+        plugins.broadcast_event(self, 3, msg)
+    async def on_socket_raw_send(self, payload):
+        plugins.broadcast_event(self, 4, payload)
+    async def on_message_delete(self, message):
+        plugins.broadcast_event(self, 5, message)
+    async def on_message_edit(self, before, after):
+        plugins.broadcast_event(self, 6, before, after)
+    async def on_channel_delete(self, channel):
+        plugins.broadcast_event(self, 7, channel)
+    async def on_channel_create(self, channel):
+        plugins.broadcast_event(self, 8, channel)
+    async def on_channel_update(self, before, after):
+        plugins.broadcast_event(self, 9, before, after)
+    async def on_member_join(self, member):
+        plugins.broadcast_event(self, 10, member)
+    async def on_member_update(self, before, after):
+        plugins.broadcast_event(self, 11, before, after)
     async def on_server_join(self, server):
-        #plugins.on_server_join_broadcast(self, server)
-
-        # Add server to the list
-        servers.add_server(self, server)
+        plugins.broadcast_event(self, 12, server)
+    async def on_server_remove(self, server):
+        plugins.broadcast_event(self, 13, server)
+    async def on_server_update(self, before, after):
+        plugins.broadcast_event(self, 14, before, after)
+    async def on_server_role_create(self, server, role):
+        plugins.broadcast_event(self, 15, server, role)
+    async def on_server_role_delete(self, server, role):
+        plugins.broadcast_event(self, 16, server, role)
+    async def on_server_role_update(self, before, after):
+        plugins.broadcast_event(self, 17, before, after)
+    async def on_server_available(self, server):
+        plugins.broadcast_event(self, 18, server)
+    async def on_server_unavailable(self, server):
+        plugins.broadcast_event(self, 19, server)
+    async def on_voice_state_update(self, before, after):
+        plugins.broadcast_event(self, 20, before, after)
+    async def on_member_ban(self, member):
+        plugins.broadcast_event(self, 21, member)
+    async def on_member_unban(self, server, user):
+        plugins.broadcast_event(self, 22, server, user)
+    async def on_typing(self, channel, user, when):
+        plugins.broadcast_event(self, 23, channel, user, when)
 
 
     # TODO: Add other plugin broadcast events

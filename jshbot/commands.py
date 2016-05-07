@@ -1,4 +1,5 @@
 import discord
+import asyncio
 import logging
 import sys
 
@@ -82,7 +83,7 @@ def get_command_pair(bot, base):
     except KeyError:
         return (None, None)
 
-def execute(bot, message, parsed_command):
+async def execute(bot, message, parsed_command):
     '''
     Gets the proper response for the parsed command by first getting the plugin,
     then calling the get_response function associated with that plugin.
@@ -90,9 +91,8 @@ def execute(bot, message, parsed_command):
     # Get plugin
     base = parsed_command[0]
     plugin_name = bot.commands[base][1]
-    plugin = bot.plugins[plugin_name]
+    plugin = bot.plugins[plugin_name][0]
     direct = message.channel.is_private
 
     # Execute plugin's get_response
-    return plugin.get_response(bot, message, parsed_command, direct)
-
+    return await (plugin.get_response(bot, message, parsed_command, direct))

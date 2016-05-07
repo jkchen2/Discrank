@@ -2,6 +2,9 @@ import discord
 import logging
 import re
 
+# Debug
+import traceback
+
 from jshbot import commands
 from jshbot.exceptions import BotException, ErrorTypes
 
@@ -15,20 +18,23 @@ def get_argument_block(split, index, get_all=False):
     elif split[index][0] == '"': # Loop until quote closed
         combined = ''
         for it in range(index, len(split) - 1):
-            if split[it][-1] == '"' and split[it][-2] != '\\': # Closed
+            if (split[it][-1] == '"' and len(split[it]) > 1 and 
+                    split[it][-2] != '\\'): # Closed
                 if it > index:
                     return (combined[1:] + split[it][:-1], it)
                 else:
                     return (split[it][1:-1], it)
             combined += split[it]
-        raise BotException(ErrorTypes.RECOVERABLE, EXCEPTION,
-                "Detected an unclosed quote", split[index])
+        logging.warn("Detected an unclsed quote: " + split[index])
+        return (combined[1:-1], it)
+        #raise BotException(ErrorTypes.RECOVERABLE, EXCEPTION,
+        #        "Detected an unclosed quote", split[index])
     else:
         return (split[index], index) # No loops necessary
 
 def split_parameters(parameters):
 
-    split = re.split('( )', parameters)
+    split = re.split('( +)', parameters)
     split.append('-')
     pairs = {} # {op1: arg1, op2: arg2} ("op1: op2: +")
     leftover_arguments = [] # [arg3, arg4]
