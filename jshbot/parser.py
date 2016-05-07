@@ -2,9 +2,6 @@ import discord
 import logging
 import re
 
-# Debug
-import traceback
-
 from jshbot import commands
 from jshbot.exceptions import BotException, ErrorTypes
 
@@ -214,7 +211,7 @@ def fill_shortcut(parameters, blueprint, modifiers):
     '''
     
     # Split parameters
-    split = re.split('( )', parameters)
+    split = re.split('( +)', parameters)
     split.append('-')
 
     it = 0
@@ -236,10 +233,17 @@ def fill_shortcut(parameters, blueprint, modifiers):
             format_list.append(remaining.strip())
         it += 1
 
+    # Check for modifiers length mismatch
+    if len(modifiers) == 0 and len(split) - 2:
+        raise BotException(ErrorTypes.RECOVERABLE, EXCEPTION,
+                "Shortcut requires no arguments, but some were given.")
+
     # Insert elements from the format list
     filled_blueprint = blueprint.format(*format_list)
-    print("This is the filled blueprint: ", filled_blueprint)
-    return filled_blueprint.split(' ', 1)
+    blueprint_split = filled_blueprint.split(' ', 1)
+    if len(blueprint_split) == 1:
+        blueprint_split.append('')
+    return blueprint_split
 
 def replace_aliases(pairs, aliases, last_option):
     '''

@@ -6,7 +6,10 @@ import time
 import sys
 import os
 
-from jshbot import configurations, plugins, commands, servers, parser
+# Debug
+import traceback
+
+from jshbot import configurations, plugins, commands, servers, parser, data
 from jshbot.exceptions import ErrorTypes, BotException
 
 EXCEPTION = 'Core'
@@ -15,7 +18,7 @@ class Bot(discord.Client):
     
     def __init__(self, debug):
         self.version = '0.3.0-alpha'
-        self.date = 'May 6th, 2016'
+        self.date = 'May 7th, 2016'
         self.time = int(time.time())
         self.readable_time = time.strftime('%c')
         self.debug = debug
@@ -38,6 +41,7 @@ class Bot(discord.Client):
         self.commands = {}
         self.manual = {}
         self.plugins = plugins.get_plugins(self)
+        self.directories = data.get_directories(self)
         logging.debug("Loading server data...")
         self.servers_data = servers.get_servers_data(self)
 
@@ -132,6 +136,12 @@ class Bot(discord.Client):
             response = await (commands.execute(self, message, parsed_command))
         except BotException as e: # Respond with error message
             response = (str(e), False, 0, None)
+        except Exception as e: # General error
+            logging.error(e)
+            traceback.print_exc()
+            response = ('Uh oh. The bot encountered an exception: ' + str(e),
+                    False, 0, None)
+
         message_reference = await self.send_message(
                 message.channel, response[0], tts=response[1])
 
@@ -219,12 +229,14 @@ class Bot(discord.Client):
     def restart(self):
         logging.debug("Attempting to restart the bot...")
         self.save_data()
-        os.execv(self.path + '/start.py', sys.argv)
+        asyncio.ensure_future(self.logout())
+        os.system('python3.5 ' + self.path + '/start.py')
 
     def shutdown(self):
         logging.debug("Writing data on shutdown...")
         self.save_data()
         logging.debug("Closing down!")
+        asyncio.ensure_future(self.logout())
         sys.exit()
 
 def initialize(debug=False):

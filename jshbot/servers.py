@@ -76,6 +76,33 @@ def modify_user_group(bot, server, identity, add, which):
             raise BotException(ErrorTypes.RECOVERABLE, EXCEPTION,
                     "User was not in the {} list.".format(which))
         bot.servers_data[server.id][which].remove(user_id)
+    return user_id
+
+def modify_mute_status(bot, change, mute):
+    '''
+    Mutes or unmutes the given type of to_change (either server or channel).
+    '''
+    change_id = change.id
+    if type(change) is discord.Channel: # Channel
+        change_reference = bot.servers_data[change.server.id]['muted_channels']
+        currently_muted = (change.id in change_reference)
+        change = 'Channel'
+    else: # Server
+        currently_muted = bot.servers_data[change.id]['muted']
+        change = 'Server'
+
+    if not (currently_muted ^ mute):
+        raise BotException(ErrorTypes.RECOVERABLE, EXCEPTION,
+                "{} is already {}muted.".format(change, '' if mute else 'un'))
+    else:
+        if change == 'Channel':
+            if mute:
+                change_reference.append(change_id)
+            else:
+                change_reference.remove(change_id)
+        else:
+            bot.servers_data[change_id]['muted'] = mute
+    return change_id
 
 def get_servers_data(bot):
     directory = bot.path + "/data"
