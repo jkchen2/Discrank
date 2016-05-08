@@ -8,8 +8,9 @@ import logging
 from jshbot import servers
 from jshbot.exceptions import ErrorTypes, BotException
 
-__version__ = '0.1.0'
+__version__ = '0.1.1'
 EXCEPTION = 'Base'
+uses_configuration = False
 local_dictionary = {}
 
 def get_commands():
@@ -34,11 +35,11 @@ def get_commands():
         'unmute :'],[
         ('info', 'i'), ('clear', 'c')])
     commands['base'] = ([
-        'version', 'source', 'uptime', 'help: ?topic:'],[
+        'version', 'source', 'uptime', 'help: ?topic:', 'help'],[
         ('version', 'ver', 'v'), ('source', 'src', 'git'), ('help', 'h')])
 
     shortcuts['clear'] = ('mod -clear', '')
-    shortcuts['help'] = ('base -help {}', '^')
+    shortcuts['help'] = ('base -help {}', '&')
     shortcuts['restart'] = ('owner -restart', '')
 
     manual['ping'] = {
@@ -83,7 +84,8 @@ def get_commands():
             ('-uptime', 'Gets how long the bot has been up.'),
             ('-help <command> (-topic <index>)', 'Gets the help about the '
                 'given command, with extra information on a specific option '
-                'if the topic option is provided with a valid index.')],
+                'if the topic option is provided with a valid index.'),
+            ('-help', 'Gets the general help page.')],
         'shortcuts': [('help <arguments>', '-help <arguments>')]}
 
     return (commands, shortcuts, manual)
@@ -100,6 +102,7 @@ async def get_response(bot, message, parsed_command, direct):
         response = 'Pong!\n' + arguments
 
     elif base == 'base':
+
         if plan_index == 0: # version
             response = '`{}`\n{}'.format(bot.version, bot.date)
         elif plan_index == 1: # source
@@ -125,9 +128,16 @@ async def get_response(bot, message, parsed_command, direct):
             "days\n{hours} hours\n{minutes} minutes\n{seconds} "
             "seconds").format(initial=bot.readable_time, days=days, 
                     hours=hours, minutes=minutes, seconds=seconds)
-        elif plan_index == 3: # help
-            response = get_help(bot, options['help'], 
-                    topic=options['topic'] if 'topic' in options else None)
+        elif plan_index >= 3: # help, detailed or general
+            if plan_index == 3: # Detailed
+                response = get_help(bot, options['help'], 
+                        topic=options['topic'] if 'topic' in options else None)
+            else: # General
+                response = get_general_help(bot)
+            await bot.send_message(message.author, response)
+            response = "Check your direct messages!"
+            message_type = 2
+            extra = 15
 
     elif base == 'mod':
 
@@ -282,6 +292,19 @@ async def get_response(bot, message, parsed_command, direct):
         response = "This should not be seen. Your command was: " + base
 
     return (response, tts, message_type, extra)
+
+def get_general_help(bot):
+    '''
+    Gets the general help. Lists all base commands that aren't shortcuts.
+    '''
+
+    response = "Here is a list of base commands:\n```\n"
+    for base in bot.commands:
+        if type(bot.commands[base][0]) is not str: # Skip shortcuts
+            response += base + '\n'
+    response += "```\nGet help on a command with `{}help <command>`".format(
+            bot.configurations['core']['command_invokers'][0])
+    return response
 
 def get_help(bot, base, topic=None):
     '''

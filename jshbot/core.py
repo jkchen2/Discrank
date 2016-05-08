@@ -35,13 +35,14 @@ class Bot(discord.Client):
         self.path = os.path.split(os.path.realpath(__file__))[0][:-7]
         logging.debug("Setting directory to {}".format(self.path));
 
-        logging.debug("Loading configurations...")
-        self.configurations = configurations.get_configurations(self)
         logging.debug("Loading plugins and commands...")
-        self.commands = {}
-        self.manual = {}
+        self.commands = {} # Set by get_plugins
+        self.manual = {} # Set by get_plugins
+        self.data = {} # Set by individual plugins
         self.plugins = plugins.get_plugins(self)
         self.directories = data.get_directories(self)
+        logging.debug("Loading configurations...")
+        self.configurations = configurations.get_configurations(self)
         logging.debug("Loading server data...")
         self.servers_data = servers.get_servers_data(self)
 
@@ -155,6 +156,9 @@ class Bot(discord.Client):
         # If message_type is >= 1, do not add to the edit dictionary
         # TODO: Add normal message response to the edit dictionary
         
+        if response[2] == 2: # Terminal
+            await asyncio.sleep(response[3])
+            await self.delete_message(message_reference)
 
     async def on_ready(self):
         plugins.broadcast_event(self, 0)

@@ -1,0 +1,7 @@
+{
+    "owners": ["98335658795347968", "101567516408578048"],
+    "token": "",
+    "send_typing": true,
+    "mention_mode": false,
+    "command_invokers": ["=", "]", "/"]
+}
