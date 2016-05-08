@@ -1,0 +1,64 @@
+Kill Participation = Take x player's # of kills and divide by total number of kills on team.
+
+########################################################################
+
+Simple
+Recent
+
+Game Type: (DYNAMIC QUEUE, ARAM, NORMAL, NORMAL DRAFT, etc)
+Champion Played - K/D/A (KDA Value) - Kill Participation (%) - Summoner Spell 1 - Summoner Spell 2
+Win / Loss
+
+########################################################################
+
+Detailed
+Recent
+
+Game Type: (DYNAMIC QUEUE, ARAM, NORMAL, NORMAL DRAFT, etc)
+## Look Up Summoner Name Should Be Bolded
+Blue Side -- Bans [Champion 1, 2, 3] (sometimes players might miss a ban) [WIN / LOSS]
+Summoner Name 1 - Champion (Mastery Point | Mastery Level) - K/D/A (KDA Value) - Summoner Spell 1 - Summoner Spell 2 
+Summoner Name 2 - Champion (Mastery Point | Mastery Level) - K/D/A (KDA Value) - Summoner Spell 1 - Summoner Spell 2
+Summoner Name 3 - Champion (Mastery Point | Mastery Level) - K/D/A (KDA Value) - Summoner Spell 1 - Summoner Spell 2
+Summoner Name 4 - Champion (Mastery Point | Mastery Level) - K/D/A (KDA Value) - Summoner Spell 1 - Summoner Spell 2
+Summoner Name 5 - Champion (Mastery Point | Mastery Level) - K/D/A (KDA Value) - Summoner Spell 1 - Summoner Spell 2
+
+Red Side -- Bans [Champion 1, 2, 3] (sometimes players might miss a ban) [WIN / LOSS]
+Summoner Name 1 - Champion (Mastery Point | Mastery Level) - K/D/A (KDA Value) - Summoner Spell 1 - Summoner Spell 2
+Summoner Name 2 - Champion (Mastery Point | Mastery Level) - K/D/A (KDA Value) - Summoner Spell 1 - Summoner Spell 2
+Summoner Name 3 - Champion (Mastery Point | Mastery Level) - K/D/A (KDA Value) - Summoner Spell 1 - Summoner Spell 2
+Summoner Name 4 - Champion (Mastery Point | Mastery Level) - K/D/A (KDA Value) - Summoner Spell 1 - Summoner Spell 2
+Summoner Name 5 - Champion (Mastery Point | Mastery Level) - K/D/A (KDA Value) - Summoner Spell 1 - Summoner Spell 2
+
+########################################################################
+
+Simple
+Current
+
+Game Type: (DYNAMIC QUEUE, ARAM, NORMAL, NORMAL DRAFT, etc)
+Champion Playing - K/D/A (KDA Value) ##RANKED STATS SUMMARY, NOT LIVE VALUE## (Mastery Point|Mastery Level) - Summoner Spell 1 - Summoner Spell 2
+Blue Side / Red Side
+Current Game Time mm:ss
+
+########################################################################
+
+Detailed
+Current
+
+## Look Up Summoner Name Should Be Bolded
+##THE KDA IS RANKED STATS SUMMARY, NOT LIVE VALUE##
+
+Current Game Time: 
+Blue Side -- Bans [Champion 1, 2, 3] (sometimes players might miss a ban) [WIN / LOSS]
+Summoner Name 1 - Champion (Mastery Point | Mastery Level) - K/D/A (KDA Value) - Summoner Spell 1 - Summoner Spell 2 
+Summoner Name 2 - Champion (Mastery Point | Mastery Level) - K/D/A (KDA Value) - Summoner Spell 1 - Summoner Spell 2
+Summoner Name 3 - Champion (Mastery Point | Mastery Level) - K/D/A (KDA Value) - Summoner Spell 1 - Summoner Spell 2
+Summoner Name 4 - Champion (Mastery Point | Mastery Level) - K/D/A (KDA Value) - Summoner Spell 1 - Summoner Spell 2
+Summoner Name 5 - Champion (Mastery Point | Mastery Level) - K/D/A (KDA Value) - Summoner Spell 1 - Summoner Spell 2
+
+Red Side -- Bans [Champion 1, 2, 3] (sometimes players might miss a ban) [WIN / LOSS]
+Summoner Name 1 - Champion (Mastery Point | Mastery Level) - K/D/A (KDA Value) - Summoner Spell 1 - Summoner Spell 2
+Summoner Name 2 - Champion (Mastery Point | Mastery Level) - K/D/A (KDA Value) - Summoner Spell 1 - Summoner Spell 2
+Summoner Name 3 - Champion (Mastery Point | Mastery Level) - K/D/A (KDA Value) - Summoner Spell 1 - Summoner Spell 2
+Summoner Name 4 - Champion (Mastery Point | Mastery Level) - K/D/A (KDA Value) - Summoner Spell 1 - Summoner Spell 2
+Summoner Name 5 - Champion (Mastery Point | Mastery Level) - K/D/A (KDA Value) - Summoner Spell 1 - Summoner Spell 2
