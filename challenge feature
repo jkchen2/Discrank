@@ -1,0 +1,15 @@
+!challenge <summoner1> <summoner2> <champion1> <champion2>
+
+value1 = (mastery_level_of_champion_1) * ln[mastery_point_of_champion1];
+value2 = (mastery_level_of_champion_2) * ln[mastery_point_of_champion2];
+
+total = value1 + value2;
+
+generatedNumber = random.random() * total; // Should return a value from 0 to total.
+
+if (generatedNumber < value1)
+    summoner1 wins
+if (generatedNumber > value1)
+    summoner2 wins
+else
+    What are the odds of this even happening? Tie? 
