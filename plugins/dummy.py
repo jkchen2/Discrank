@@ -22,6 +22,10 @@ import asyncio
 
 from jshbot.exceptions import ErrorTypes, BotException
 
+__version__ = '0.1.0'
+EXCEPTION = 'Dummy'
+uses_configuration = False
+
 def get_commands():
 
     commands = {}
@@ -138,7 +142,7 @@ async def get_response(bot, message, parsed_command, direct):
         
         # We only have one command, checking for plan_index isn't necessary.
         if arguments:
-            respones = ("You called the other command and gave this "
+            response = ("You called the other command and gave this "
                     "argument: " + arguments)
         else:
             response = "You called the other command with no arguments."

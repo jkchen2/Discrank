@@ -203,7 +203,7 @@ def match_blueprint(options, arguments, last_option, blueprints):
     # A suitable blueprint could not be found
     raise Exception() # This is probably not the best way to do this
 
-def fill_shortcut(parameters, blueprint, modifiers):
+def fill_shortcut(bot, parameters, blueprint, modifiers):
     '''
     Replaces elements in the blueprint with the modifiers specified.
     Example: fill_shortcut('"my tag" tag text', 'tag -create {} {}', ':^')
@@ -220,6 +220,9 @@ def fill_shortcut(parameters, blueprint, modifiers):
 
         if modifier == ':': # Insert single argument
             block, it = get_argument_block(split, it, get_all=True)
+            if not block or block == '-':
+                it = -1 # Set error
+                break
             format_list.append('"' + block + '"')
         else: # Insert remaining trailing arguments
             remaining = ''
@@ -232,6 +235,11 @@ def fill_shortcut(parameters, blueprint, modifiers):
                 it += 1
             format_list.append(remaining.strip())
         it += 1
+
+    if it < len(split) - 1:
+        base = blueprint.split(' ', 1)[0]
+        raise BotException(ErrorTypes.RECOVERABLE, EXCEPTION,
+                "Invalid syntax.", bot.usage_reminder(base))
 
     # Check for modifiers length mismatch
     if len(modifiers) == 0 and len(split) - 2:
@@ -270,7 +278,7 @@ def parse(bot, base, parameters, command_pair, shortcut):
 
     if shortcut: # Check blueprint for layout
         base, parameters = fill_shortcut(
-            parameters, command_pair[0], command_pair[1])
+            bot, parameters, command_pair[0], command_pair[1])
         command_pair, shortcut = commands.get_command_pair(bot, base)
         return parse(bot, base, parameters, command_pair, shortcut)
     else:

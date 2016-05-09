@@ -2,6 +2,8 @@ import discord
 import asyncio
 import requests
 import time
+import random
+import math
 
 # Debugging
 import logging
@@ -11,7 +13,7 @@ from riotwatcher import LoLException, error_429
 
 from jshbot.exceptions import ErrorTypes, BotException
 
-__version__ = '0.1.1'
+__version__ = '0.1.2'
 EXCEPTION = 'Riot API plugin'
 uses_configuration = True
 
@@ -28,11 +30,13 @@ def get_commands():
         'summoner: ?extra',
         'match: ?basic',
         'mastery: ?champion:',
-        'challenge ::::'],[
+        'challenge ::::',
+        'chests:'],[
         ('summoner', 'user', 's', 'i', 'info'),
         ('extra', 'x', 'e', 'verbose', 'detail', 'detailed', 'more'),
         ('basic', 'b', 'simple', 'concise'),
-        ('champion', 'c')])
+        ('champion', 'c'),
+        ('chests', 'chest', 'box', 'boxes')])
 
     shortcuts['summoner'] = ('blitz -summoner {}', '^')
     shortcuts['mastery'] = ('blitz -mastery {}', '^')
@@ -48,12 +52,16 @@ def get_commands():
             ('-mastery <summoner> (-champion <champion>)', 'Gets the mastery '
                 'data of the given summoner.'),
             ('-challenge <summoner 1> <summoner 2> <champion 1> <champion 2>',
-                'This does something, I dunno lol')],
+                'This command compares two summoner\'s mastery points, '
+                'mastery levels, and # of games played (ranked) data against '
+                'each other.'),
+            ('-chests <summoner>', 'Gets the available chests for the given '
+                'summoner.')],
         'shortcuts': [
             ('summoner <arguments>', '-summoner <arguments>'),
             ('challenge <summoner 1> <summoner 2> <champion 1> <champion 2>',
                 '-challenge <summoner 1> <summoner 2> <champion 1> '
-                '<champion 2>')
+                '<champion 2>'),
             ('mastery <arguments>', '-mastery <arguments>')]}
 
     return (commands, shortcuts, manual)
@@ -173,7 +181,10 @@ def get_mastery_wrapper(bot, summoner_id, top=True, champion_id=None):
             top=('top' if top else ''), champion=champion, key=api_key)
     print(url)
     r = requests.get(url)
-    result = r.json()
+    try:
+        result = r.json()
+    except:
+        return None
     if 'status' in result:
         error_code = result['status']['status_code']
         if error_code == 429:
@@ -330,7 +341,6 @@ def get_match_table(static, match, mastery, summoner_id, finished=True,
             
             # Game type
             response += 'Game Type: {}\n'.format(game)
-
             response += '{} Team'.format(
                     'Blue' if team == 100 else 'Red')
 
@@ -584,6 +594,124 @@ def get_mastery_table(bot, static, watcher, name, champion=None):
             response += get_formatted_mastery_data(static, champion_data[it])
     return response + '```'
 
+def get_ranked_stats_wrapper(watcher, summoner_id):
+    '''
+    Returns the ranked stats with error checking. Returns None if the stats
+    do not exist.
+    '''
+    try:
+        return watcher.get_ranked_stats(summoner_id)
+    except LoLException as e:
+        if e == error_429:
+            api_cooldown()
+        else:
+            return None
+
+def get_challenge_result(bot, static, watcher, arguments):
+    '''
+    This returns a result of the challenge minigame. The minigame consists of
+    pitting two summoners' champions' mastery values against each other. 
+    '''
+
+    summoners = [arguments[0], arguments[1]]
+    champions = [arguments[2], arguments[3]]
+    games = [0, 0]
+    names = ['', '']
+    ids = [0, 0]
+
+    for it in range(2):
+
+        # Get summoner data and champion ID
+        summoners[it] = get_summoner_wrapper(watcher, summoners[it])
+        names[it] = summoners[it]['name']
+        try: # In case the champion isn't valid
+            champions[it] = static[1][champions[it].replace(' ', '').lower()]
+            champions[it] = champions[it]['id']
+        except KeyError:
+            return "Could not find the champion {}.".format(champions[it])
+
+        # Get ranked stats for total games played on each champion
+        ids[it] = summoners[it]['id']
+        summoners[it] = get_ranked_stats_wrapper(watcher, ids[it])
+
+        if summoners[it]:
+            for champion in summoners[it]['champions']:
+                if champion['id'] == champions[it]:
+                    games[it] = champion['stats']['totalSessionsPlayed']
+        if not games[it] or games[it] == 1:
+            games[it] = math.e
+
+        # Get champion mastery data for each champion
+        data = get_mastery_wrapper(bot, ids[it], champion_id=champions[it])
+        if data:
+            champions[it] = (data['championPoints'], data['championLevel'])
+        else: # No mastery data on this champion
+            champions[it] = (math.e, 1)
+
+    # Do the calculation
+    if champions[0][1] and champions[1][1] and games[0] and games[1]:
+
+        # Give approximate chance score
+        scores = [0, 0]
+
+        # Do calculation stuff
+        for it in range(2):
+            scores[it] = (champions[it][1] * math.log1p(games[it]) *
+                math.log1p(champions[it][0]))
+
+        # Calculate chance
+        total = scores[0] + scores[1]
+        response = ("Chance of {0} winning: {1:.2f}%\n"
+            "Chance of {2} winning: {3:.2f}%\n").format(
+                    names[0], 100 * scores[0] / total,
+                    names[1], 100 * scores[1] / total)
+
+        # Calculate winner
+        random_value = random.random() * total
+        response += 'The RNG gods rolled: {0:.1f}\n'.format(random_value)
+        response += 'The winner is **{}**!'.format(
+                names[0] if random_value < scores[0] else names[1])
+
+        return response
+
+    else:
+        return "Something bad happened. Please report!"
+
+def get_chests(bot, static, watcher, name):
+    '''
+    Returns a formatted string with the list of chests that a summoner has not
+    obtained yet through mastery.
+    '''
+
+    # Get mastery data
+    summoner = get_summoner_wrapper(watcher, name)
+    mastery = get_mastery_wrapper(bot, summoner['id'], top=False)
+    response = ("Here is a list of champions that {} has not received a chest "
+            "for:\n").format(summoner['name'])
+    champions = []
+    for data in mastery: # Look for chests that can be obtained
+        if not data['chestGranted']:
+            champion_name = static[1][str(data['championId'])]['name']
+            champions.append(champion_name)
+    champions.sort()
+
+    if not champions:
+        return "This summoner has no mastery data."
+
+    # Format the result
+    for it in range(len(champions) % 6):
+        champions.append('') # Fill out the rest with empty strings
+    total_length = len(champions)
+
+    response += '```\n'
+    for it in range(int(total_length/6)):
+        for it2 in range(6):
+            response += '{}'.format(champions[6*it + it2]).ljust(14)
+        response += '\n'
+    response += '```'
+
+    return response
+
 async def get_response(bot, message, parsed_command, direct):
 
     response = ''
@@ -605,8 +733,10 @@ async def get_response(bot, message, parsed_command, direct):
             champion = options['champion'] if 'champion' in options else ''
             response = get_mastery_table(bot, static, static[0],
                     options['mastery'], champion=champion)
-        else:
-            response = "Not done yet, sorry!"
+        elif plan_index == 3: # Challenge
+            response = get_challenge_result(bot, static, static[0], arguments)
+        elif plan_index == 4: # Chests
+            response = get_chests(bot, static, static[0], options['chests']) 
 
     return (response, tts, message_type, extra)
 

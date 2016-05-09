@@ -172,9 +172,6 @@ class Bot(discord.Client):
         # Make sure server data is ready
         servers.check_all(self)
 
-        #logging.debug("Setting bot name...")
-        # Set bot name
-
         if self.debug:
             logging.debug("=== {} online ===".format(self.user.name))
         else:

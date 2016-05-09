@@ -5,6 +5,9 @@ import os.path
 import importlib.util
 import sys
 
+# Debug
+import traceback
+
 from jshbot import core, configurations, commands
 from jshbot.exceptions import ErrorTypes, BotException
 
@@ -45,6 +48,7 @@ def get_plugins(bot):
             commands.add_commands(bot, shortcuts, plugin)
             commands.add_manual(bot, manual)
         except Exception as e:
+            traceback.print_exc()
             raise BotException(ErrorTypes.STARTUP, EXCEPTION,
                     "Failed to import external plugin", plugin, e=e)
         else:
