@@ -1,6 +1,7 @@
 import discord
 import asyncio
 import requests
+import time
 
 # Debugging
 import logging
@@ -26,13 +27,15 @@ def get_commands():
     commands['blitz'] = ([
         'summoner: ?extra',
         'match: ?basic',
-        'mastery: ?basic',
+        'mastery: ?champion:',
         'challenge ::::'],[
         ('summoner', 'user', 's', 'i', 'info'),
         ('extra', 'x', 'e', 'verbose', 'detail', 'detailed', 'more'),
-        ('basic', 'b', 'simple', 'concise')])
+        ('basic', 'b', 'simple', 'concise'),
+        ('champion', 'c')])
 
     shortcuts['summoner'] = ('blitz -summoner {}', '^')
+    shortcuts['mastery'] = ('blitz -mastery {}', '^')
     shortcuts['challenge'] = ('blitz -challenge {} {} {} {}', '::::')
 
     manual['blitz'] = {
@@ -41,16 +44,17 @@ def get_commands():
             ('-info <summoner> (-extra)', 'Gets the information of the given '
             'summoner. Extra information provides a more verbose result.'),
             ('-match <summoner> (-basic)', 'Gets the current or most '
-                'recent match data.'),
-            ('-mastery <summoner> (-basic)', 'Gets the mastery data of the '
-                'given summoner.'),
+                'recent ranked match data.'),
+            ('-mastery <summoner> (-champion <champion>)', 'Gets the mastery '
+                'data of the given summoner.'),
             ('-challenge <summoner 1> <summoner 2> <champion 1> <champion 2>',
                 'This does something, I dunno lol')],
         'shortcuts': [
             ('summoner <arguments>', '-summoner <arguments>'),
             ('challenge <summoner 1> <summoner 2> <champion 1> <champion 2>',
                 '-challenge <summoner 1> <summoner 2> <champion 1> '
-                '<champion 2>')]}
+                '<champion 2>')
+            ('mastery <arguments>', '-mastery <arguments>')]}
 
     return (commands, shortcuts, manual)
 
@@ -101,13 +105,13 @@ def get_match_list_wrapper(watcher, summoner_id):
     Gets the match list of the summoner. Returns an empty list if there are no
     matches.
     '''
-    try:
+    try: # TODO: Convert to recent game instead, but the API is so different
         return watcher.get_match_list(summoner_id)['matches']
-    except LoLException as e:
+    except Exception as e:
         if e == error_429:
             api_cooldown()
         else:
-            logging.warn("Summoner hsa no match list.")
+            logging.warn("Summoner has no match list.")
             return []
 
 def get_recent_match(match_list, no_team=False):
@@ -149,17 +153,26 @@ def get_current_match_wrapper(watcher, summoner_id):
             api_cooldown()
         return None
 
-def get_mastery_wrapper(bot, summoner_id, top=True):
+def get_mastery_wrapper(bot, summoner_id, top=True, champion_id=None):
     '''
     Returns the current player mastery if it exists, otherwise returns None.
+    If champion_id is specified, this gets mastery data about that specific
+    champion.
     '''
     region1 = 'na'
     region2 = 'NA1'
     api_key = bot.configurations['discrank.py']['token']
+    if champion_id:
+        champion = '/{}'.format(champion_id)
+        top=False
+    else:
+        champion = 's'
     url = ('https://{region1}.api.pvp.net/championmastery/location/{region2}/'
-        'player/{player}/{top}champions?api_key={key}')
-    r = requests.get(url.format(region1=region1, region2=region2,
-            player=summoner_id, top=('top' if top else ''), key=api_key))
+        'player/{player}/{top}champion{champion}?api_key={key}').format(
+            region1=region1, region2=region2, player=summoner_id, 
+            top=('top' if top else ''), champion=champion, key=api_key)
+    print(url)
+    r = requests.get(url)
     result = r.json()
     if 'status' in result:
         error_code = result['status']['status_code']
@@ -228,6 +241,8 @@ def get_champion_kda(watcher, summoner_id, champion_id):
         if e == error_429:
             return 'API Limit'
         else:
+            print(type(e).__name__)
+            print(e)
             return 'n/a (error)'
     for champion in stats['champions']:
         if champion['id'] == champion_id:
@@ -259,7 +274,6 @@ def get_bans(static, match, team, finished=True):
     '''
     Returns the 3 bans for the given team in the given match.
     '''
-    #champion_name = static[1][champion_id]['name']
     bans = []
     if finished:
         ban_list = match['teams'][int((team/100) - 1)]['bans']
@@ -317,16 +331,16 @@ def get_match_table(static, match, mastery, summoner_id, finished=True,
             # Game type
             response += 'Game Type: {}\n'.format(game)
 
+            response += '{} Team'.format(
+                    'Blue' if team == 100 else 'Red')
+
             # Get bans
             try:
                 bans = "{0}, {1}, {2}".format(
                         *get_bans(static, match, team, finished))
-            except:
-                bans = None
-            response += '{} Team'.format(
-                    'Blue' if team == 100 else 'Red')
-            if bans:
                 response += ' -- Bans [{}]'.format(bans)
+            except:
+                logging.warn("No bans.")
 
             # Add game won or lost
             if finished:
@@ -337,7 +351,9 @@ def get_match_table(static, match, mastery, summoner_id, finished=True,
 
             # Loop through each participant on the team
             response += ('  Summoner         | Champion     | '
-                    'KDA                | Spell 1  | Spell 2  |\n')
+                    'KDA                   | Spell 1  | Spell 2  |\n'
+                    '-------------------|--------------|-'
+                    '----------------------|----------|----------|\n')
             for index, member in enumerate(match['participants']):
                 if member['teamId'] != team: # Continue
                     continue
@@ -375,11 +391,11 @@ def get_match_table(static, match, mastery, summoner_id, finished=True,
                     response += '  '
 
                 # Add champion name, kda, and spells
-                response += ('{}'.format(summoner_name)).ljust(17) + '|'
-                response += (' {}'.format(champion)).ljust(14) + '|'
-                response += (' {}'.format(kda)).ljust(20) + '|'
-                response += (' {}'.format(spell1)).ljust(10) + '|'
-                response += (' {}'.format(spell2)).ljust(10) + '|'
+                response += ('{}'.format(summoner_name)).ljust(17) + '| '
+                response += ('{}'.format(champion)).ljust(13) + '| '
+                response += ('{}'.format(kda)).ljust(22) + '| '
+                response += ('{}'.format(spell1)).ljust(9) + '| '
+                response += ('{}'.format(spell2)).ljust(9) + '|'
                 response += '\n'
 
             response += '\n'
@@ -488,27 +504,85 @@ def get_summoner_information(bot, static, watcher, name, verbose=False):
             "**League Points:** {1[leaguePoints]}\n"
             "**Wins/Losses:** {1[wins]}/{1[losses]}\n"
             "**W/L Percent:** {2:.2f}%\n\n").format(division, entries, wlr)
-
-        # Get last match or current match information
-        match = get_current_match_wrapper(watcher, summoner['id'])
-        currently_playing = bool(match)
-        if not currently_playing: # Get most recent match
-            match_list = get_match_list_wrapper(watcher, summoner['id'])
-            recent_match = get_recent_match(match_list, no_team=True)
-            match = get_match_wrapper(watcher, recent_match)
-
-        # If a suitable match was found, get the information
-        if match:
-            response += "***`{} Match`***\n".format(
-                    'Current' if currently_playing else 'Last')
-            response += get_match_table(static, match, mastery, summoner['id'],
-                    finished=(not currently_playing), verbose=False)
-        else:
-            response += "A most recent match was not found..."
     else:
-        response += "This summoner has not played ranked yet this season..."
+        response += "This summoner has not played ranked yet this season...\n"
+
+    # Get last match or current match information
+    match = get_current_match_wrapper(watcher, summoner['id'])
+    currently_playing = bool(match)
+    if not currently_playing: # Get most recent match
+        match_list = get_match_list_wrapper(watcher, summoner['id'])
+        recent_match = get_recent_match(match_list, no_team=True)
+        match = get_match_wrapper(watcher, recent_match)
+
+    # If a suitable match was found, get the information
+    if match:
+        response += "***`{} Match`***\n".format(
+                'Current' if currently_playing else 'Last')
+        response += get_match_table(static, match, mastery, summoner['id'],
+                finished=(not currently_playing), verbose=False)
+    else:
+        response += "A most recent match was not found...\n"
 
     return response
+
+def get_formatted_mastery_data(static, champion_data):
+    '''
+    Returns a formatted string of the given champion mastery data.
+    '''
+    champion_name = static[1][str(champion_data['championId'])]['name']
+    chest = 'Yes' if champion_data['chestGranted'] else 'No'
+    if 'lastPlayTime' in champion_data:
+        last_played = time.time() - champion_data['lastPlayTime']/1000
+        last_played = '{0:.1f} d'.format(last_played/86400)
+    else: # No data
+        last_played = 'Unknown'
+    if 'highestGrade' in champion_data:
+        highest_grade = champion_data['highestGrade']
+    else:
+        highest_grade = 'n/a'
+    response = '{}'.format(champion_name).ljust(14) + '| '
+    response += '{0[championPoints]}'.format(champion_data).ljust(10) + '| '
+    response += '{0[championLevel]}'.format(champion_data).ljust(4) + '| '
+    response += '{}'.format(chest).ljust(4) + '| '
+    response += '{}'.format(highest_grade).ljust(6) + '| '
+    response += '{}'.format(last_played)
+    return response + '\n'
+
+def get_mastery_table(bot, static, watcher, name, champion=None):
+    '''
+    Gets mastery information for the given summoner. If the champion argument
+    is specified, it will find the details of that champion only.
+    The table generated will be the top 10 champions of the summoner.
+    '''
+    summoner = get_summoner_wrapper(watcher, name)
+    if champion:
+        try:
+            champion_id = static[1][champion.replace(' ', '').lower()]['id']
+            champion_data = get_mastery_wrapper(bot, summoner['id'], 
+                    champion_id=champion_id)
+        except KeyError:
+            raise BotException(ErrorTypes.RECOVERABLE, EXCEPTION,
+                    "Champion not found.")
+    else:
+        champion_data = get_mastery_wrapper(bot, summoner['id'], top=False)
+    
+    labels = '#  | Champion      | Points    | Lvl | Box | Grade | Last Played '
+    line = '---|---------------|-----------|-----|-----|-------|-------------'
+
+    if champion:
+        labels = labels[5:]
+        line = line[5:]
+
+    response = '```\n{}\n{}\n'.format(labels, line)
+
+    if champion:
+        response += get_formatted_mastery_data(static, champion_data)
+    else:
+        for it in range(10):
+            response += '{}'.format(it + 1).ljust(3) + '| '
+            response += get_formatted_mastery_data(static, champion_data[it])
+    return response + '```'
 
 async def get_response(bot, message, parsed_command, direct):
 
@@ -527,6 +601,10 @@ async def get_response(bot, message, parsed_command, direct):
         elif plan_index == 1: # Get match information
             response = get_match_table_wrapper(bot, static, static[0],
                     options['match'], verbose=(not 'basic' in options))
+        elif plan_index == 2: # Get mastery table
+            champion = options['champion'] if 'champion' in options else ''
+            response = get_mastery_table(bot, static, static[0],
+                    options['mastery'], champion=champion)
         else:
             response = "Not done yet, sorry!"
 
@@ -540,8 +618,12 @@ async def on_ready(bot):
         raise BotException(ErrorTypes.STARTUP, EXCEPTION,
             "The given Riot API token cannot get requests.")
 
-    # Add champions and skills by ID
+    # Add champions by ID and name, and skills by ID
     champions = watcher.static_get_champion_list(data_by_id=True)['data']
+    champions_named = watcher.static_get_champion_list()['data']
+    champions_named = dict(
+            (key.lower(), value) for key, value in champions_named.items())
+    champions.update(champions_named)
     spells = watcher.static_get_summoner_spell_list(data_by_id=True)['data']
 
     # Add game modes by queue type and name
