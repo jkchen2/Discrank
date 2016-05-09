@@ -35,7 +35,7 @@ def get_commands():
         'unmute :'],[
         ('info', 'i'), ('clear', 'c')])
     commands['base'] = ([
-        'version', 'source', 'uptime', 'help: ?topic:', 'help'],[
+        'version', 'source', 'uptime', 'help: &', 'help'],[
         ('version', 'ver', 'v'), ('source', 'src', 'git'), ('help', 'h')])
 
     shortcuts['clear'] = ('mod -clear', '')
@@ -82,9 +82,9 @@ def get_commands():
             ('-version', 'Gets the bot version and date.'),
             ('-source', 'Gets the github link to the source of JshBot.'),
             ('-uptime', 'Gets how long the bot has been up.'),
-            ('-help <command> (-topic <index>)', 'Gets the help about the '
+            ('-help <command> (topic index)', 'Gets the help about the '
                 'given command, with extra information on a specific option '
-                'if the topic option is provided with a valid index.'),
+                'if a valid topic index is provided.'),
             ('-help', 'Gets the general help page.')],
         'shortcuts': [('help <arguments>', '-help <arguments>')]}
 
@@ -131,13 +131,16 @@ async def get_response(bot, message, parsed_command, direct):
         elif plan_index >= 3: # help, detailed or general
             if plan_index == 3: # Detailed
                 response = get_help(bot, options['help'], 
-                        topic=options['topic'] if 'topic' in options else None)
+                        topic=arguments if arguments else None)
             else: # General
                 response = get_general_help(bot)
             await bot.send_message(message.author, response)
-            response = "Check your direct messages!"
-            message_type = 2
-            extra = 15
+            if not message.channel.is_private: # Terminal reminder message
+                response = "Check your direct messages!"
+                message_type = 2
+                extra = 15
+            else:
+                response = '' # Clear response
 
     elif base == 'mod':
 
@@ -316,7 +319,7 @@ def get_help(bot, base, topic=None):
         return get_help(bot, bot.commands[base][0].split(' ', 1)[0], topic)
 
     if base not in bot.manual:
-        return "No help entry for this command."
+        return "No help entry for this command. Sorry!"
     manual_entry = bot.manual[base]
     invoker = bot.configurations['core']['command_invokers'][0]
 
@@ -325,11 +328,11 @@ def get_help(bot, base, topic=None):
         try:
             topic_index = int(topic)
         except:
-            return "Topic number is not a valid integer."
+            return "Topic number is not a valid integer.\n"
         if 'usage' not in manual_entry:
             return "No usage entry for this command."
         elif topic_index < 1 or topic_index > len(manual_entry['usage']):
-            return "Invalid topic index."
+            return "Invalid topic index.\n" + get_usage_reminder(bot, base)
         else:
             topic_pair = manual_entry['usage'][topic_index - 1]
             return '```\n{}{} {}\n\t{}```'.format(

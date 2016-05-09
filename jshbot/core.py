@@ -79,11 +79,17 @@ class Bot(discord.Client):
         Determines whether or not the bot can respond to the given message.
         Checks that the message has text, matches an invoker, and that the
         server/channel/user is not muted or blocked. Admins/moderators override.
+        If the message is a direct message, respond if there is a valid invoker.
         '''
         if (not message.content or 
                 message.content[0] not in 
-                    self.configurations['core']['command_invokers']):
+                    self.configurations['core']['command_invokers'] or
+                message.author.bot or message.author.id == self.user.id):
             return False
+
+        # Respond to direct messages
+        if message.channel.is_private:
+            return True
 
         author_id = message.author.id
         server_data = self.servers_data[message.server.id]
@@ -140,8 +146,8 @@ class Bot(discord.Client):
         except Exception as e: # General error
             logging.error(e)
             traceback.print_exc()
-            response = ('Uh oh. The bot encountered an exception: ' + str(e),
-                    False, 0, None)
+            response = ('Uh oh. The bot encountered an exception: ' + 
+                    str(type(e).__name__) + ': ' + str(e), False, 0, None)
 
         message_reference = await self.send_message(
                 message.channel, response[0], tts=response[1])

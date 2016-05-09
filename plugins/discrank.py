@@ -10,7 +10,7 @@ from riotwatcher import LoLException, error_429
 
 from jshbot.exceptions import ErrorTypes, BotException
 
-__version__ = '0.1.0'
+__version__ = '0.1.1'
 EXCEPTION = 'Riot API plugin'
 uses_configuration = True
 
@@ -25,21 +25,32 @@ def get_commands():
     
     commands['blitz'] = ([
         'summoner: ?extra',
-        'match: ?extra'],[
+        'match: ?basic',
+        'mastery: ?basic',
+        'challenge ::::'],[
         ('summoner', 'user', 's', 'i', 'info'),
-        ('extra', 'x', 'e', 'verbose', 'detail', 'detailed', 'more')])
+        ('extra', 'x', 'e', 'verbose', 'detail', 'detailed', 'more'),
+        ('basic', 'b', 'simple', 'concise')])
 
     shortcuts['summoner'] = ('blitz -summoner {}', '^')
+    shortcuts['challenge'] = ('blitz -challenge {} {} {} {}', '::::')
 
     manual['blitz'] = {
         'description': 'Get League of Legends information from the API.',
         'usage': [
             ('-info <summoner> (-extra)', 'Gets the information of the given '
             'summoner. Extra information provides a more verbose result.'),
-            ('-match <summoner> (-id <match ID>)', 'Gets the current or most '
-                'recent match data.')],
+            ('-match <summoner> (-basic)', 'Gets the current or most '
+                'recent match data.'),
+            ('-mastery <summoner> (-basic)', 'Gets the mastery data of the '
+                'given summoner.'),
+            ('-challenge <summoner 1> <summoner 2> <champion 1> <champion 2>',
+                'This does something, I dunno lol')],
         'shortcuts': [
-            ('summoner <arguments>', '-summoner <arguments>')]}
+            ('summoner <arguments>', '-summoner <arguments>'),
+            ('challenge <summoner 1> <summoner 2> <champion 1> <champion 2>',
+                '-challenge <summoner 1> <summoner 2> <champion 1> '
+                '<champion 2>')]}
 
     return (commands, shortcuts, manual)
 
@@ -129,7 +140,7 @@ def get_match_wrapper(watcher, match_id):
 
 def get_current_match_wrapper(watcher, summoner_id):
     '''
-    Returns the current match if there is one, otherwise it returns None.
+    Returns the current match if there is one, otherwise returns None.
     '''
     try:
         return watcher.get_current_game(summoner_id)
@@ -200,22 +211,24 @@ def get_participant(match, summoner_id, finished):
         return participant
 
     else: # Just the match given should be sufficient
-        for participant in match['participants']:
+        for index, participant in enumerate(match['participants']):
             if participant['summonerId'] == summoner_id:
+                participant['participantId'] = index + 1
                 return participant
 
 def get_champion_kda(watcher, summoner_id, champion_id):
     '''
     Returns a string of the given summoner's KDA of the given champion. If the
-    stats cannot be retrieved, return 'n/a'.
+    stats cannot be retrieved, return 'n/a', or 'API Limit' if the API is
+    being rate limited.
     '''
     try:
         stats = watcher.get_ranked_stats(summoner_id)
     except LoLException as e:
         if e == error_429:
-            api_cooldown()
+            return 'API Limit'
         else:
-            return 'n/a'
+            return 'n/a (error)'
     for champion in stats['champions']:
         if champion['id'] == champion_id:
             break
@@ -242,6 +255,23 @@ def get_kill_participation(match, participant_id, side):
             total_kills += participant['stats']['kills']
     return '{0:.1f}%'.format(100*participant_kills/total_kills)
 
+def get_bans(static, match, team, finished=True):
+    '''
+    Returns the 3 bans for the given team in the given match.
+    '''
+    #champion_name = static[1][champion_id]['name']
+    bans = []
+    if finished:
+        ban_list = match['teams'][int((team/100) - 1)]['bans']
+        for it in range(3):
+            bans.append(static[1][str(ban_list[it]['championId'])]['name'])
+    else:
+        for ban in match['bannedChampions']:
+            if ban['teamId'] == team:
+                bans.append(static[1][str(ban['championId'])]['name'])
+    return bans
+
+
 def get_match_table(static, match, mastery, summoner_id, finished=True, 
         verbose=False):
     '''
@@ -252,65 +282,183 @@ def get_match_table(static, match, mastery, summoner_id, finished=True,
     participant = get_participant(match, summoner_id, finished)
     response = ''
 
-    # Get game type
+    # Get game type and also time if the game is not finished
     if finished:
         queue_id = static[3][match['queueType']]
+        game_length_key = 'matchDuration'
     else:
-        queue_id = str(match['gameQueueConfigId'])
+        try:
+            queue_id = str(match['gameQueueConfigId'])
+        except KeyError:
+            queue_id = '0'
+        game_length_key = 'gameLength'
+    total_length = int(match[game_length_key]) + 180
+    minutes = str(int(total_length/60))
+    seconds = "{0:02d}".format(total_length % 60)
     game = static[3][queue_id]
-
-    # Get KDA
-    champion_id = participant['championId']
-    if finished: # Pull from participant data
-        stats = participant['stats']
-        value = ((stats['kills'] + stats['assists']) / 
-                (1 if stats['deaths'] == 0 else stats['deaths']))
-        kda = "{0[kills]}/{0[deaths]}/{0[assists]} ({1})".format(stats, value)
-    else: # Pull from league data
-        kda = get_champion_kda(static[0], summoner_id, champion_id)
 
     # Very detailed table
     if verbose:
         response = '```diff\n' # Use + and - to highlight
-        return "blargh"
 
-    # Simple 3 line game info
+        # Get winning team number
+        if finished and participant['stats']['winner']:
+            winning_team = participant['teamId']
+        elif finished:
+            winning_team = 100 if participant['teamId'] == 200 else 100
+
+        # Add current game time
+        response += "{2}Game Time: {0}:{1}\n".format(minutes, seconds,
+                '' if finished else 'Current ')
+
+        # Loop through each team
+        for team in (100, 200):
+            
+            # Game type
+            response += 'Game Type: {}\n'.format(game)
+
+            # Get bans
+            try:
+                bans = "{0}, {1}, {2}".format(
+                        *get_bans(static, match, team, finished))
+            except:
+                bans = None
+            response += '{} Team'.format(
+                    'Blue' if team == 100 else 'Red')
+            if bans:
+                response += ' -- Bans [{}]'.format(bans)
+
+            # Add game won or lost
+            if finished:
+                status = 'WON' if team == winning_team else 'LOST'
+                response += ' [{}]\n'.format(status)
+            else:
+                response += '\n'
+
+            # Loop through each participant on the team
+            response += ('  Summoner         | Champion     | '
+                    'KDA                | Spell 1  | Spell 2  |\n')
+            for index, member in enumerate(match['participants']):
+                if member['teamId'] != team: # Continue
+                    continue
+                
+                # Get summoner name
+                if finished:
+                    #index = member['participantId'] - 1
+                    summoner = match['participantIdentities'][index]
+                    summoner_name = summoner['player']['summonerName']
+                else:
+                    summoner_name = member['summonerName']
+
+                # Get champion name and spell names
+                champion = static[1][str(member['championId'])]['name']
+                spell1 = static[2][str(member['spell1Id'])]['name']
+                spell2 = static[2][str(member['spell2Id'])]['name']
+                
+                # Get KDA
+                if finished: # Pull from participant data
+                    stats = member['stats']
+                    kills, deaths = stats['kills'], stats['deaths']
+                    assists = stats['assists']
+                    value = "({0:.1f})".format(((kills + deaths) / 
+                            (1 if deaths == 0 else deaths)))
+                    kda = "{0[kills]}/{0[deaths]}/{0[assists]} {1}".format(
+                            stats, value)
+                else:
+                    kda = get_champion_kda(static[0], member['summonerId'],
+                            member['championId'])
+
+                # Highlight summoner if this is the one we're looking for
+                if index == participant['participantId'] - 1:
+                    response += '+ '
+                else:
+                    response += '  '
+
+                # Add champion name, kda, and spells
+                response += ('{}'.format(summoner_name)).ljust(17) + '|'
+                response += (' {}'.format(champion)).ljust(14) + '|'
+                response += (' {}'.format(kda)).ljust(20) + '|'
+                response += (' {}'.format(spell1)).ljust(10) + '|'
+                response += (' {}'.format(spell2)).ljust(10) + '|'
+                response += '\n'
+
+            response += '\n'
+
+        response += '\n```\n'
+
+    # Simple 3-4 line game info
     else:
+
+        # Get KDA
+        champion_id = participant['championId']
+        if finished: # Pull from participant data
+            stats = participant['stats']
+            value = "({0:.1f})".format(((stats['kills'] + stats['assists']) / 
+                    (1 if stats['deaths'] == 0 else stats['deaths'])))
+            kda = "{0[kills]}/{0[deaths]}/{0[assists]} {1}".format(stats, value)
+        else: # Pull from league data
+            kda = get_champion_kda(static[0], summoner_id, champion_id)
+
+        # Get spell names
         spell1 = static[2][str(participant['spell1Id'])]['name']
         spell2 = static[2][str(participant['spell2Id'])]['name']
         champion = static[1][str(champion_id)]['name']
+
+        # Get mastery data
         for champion_mastery in mastery:
             if champion_mastery['championId'] == champion_id:
                 break
         mastery_data = "({0[championPoints]}|{0[championLevel]})".format(
                 champion_mastery)
+
+        # Format response
         if finished:
             status = 'Won' if participant['stats']['winner'] else 'Lost'
             kill_participation = get_kill_participation(
                     match, participant['participantId'], participant['teamId'])
-            response += ("Game Type: {0}\n"
+            response += ("**Game Type:** {0}\n"
                     "{1} - {2} {3} - Kill Participation {4} - {5} - {6}\n"
                     "Status: {7}").format(game, champion, kda, mastery_data,
                             kill_participation, spell1, spell2, status)
         else:
             side = 'Blue' if participant['teamId'] == 100 else 'Red'
-            minutes = int(match['gameLength']/60)
-            seconds = match['gameLength'] % 60
-            response += ("Game Type: {0}\n"
+            response += ("**Game Type:** {0}\n"
                     "{1} - {2} {3} - {4} - {5}\n"
                     "Side: {6}\n"
-                    "Time: {7}:{8}").format(game, champion, kda, mastery_data,
+                    "Time: {7}:{8}").format(game, champion, kda, mastery_data, 
                             spell1, spell2, side, minutes, seconds)
+
     return response
 
-def get_summoner_information(bot, watcher, name, verbose=False):
+def get_match_table_wrapper(bot, static, watcher, name, verbose=False):
+    '''
+    Gets the match table. Makes the calling method easier to look at.
+    '''
+
+    summoner = get_summoner_wrapper(watcher, name)
+    mastery = get_mastery_wrapper(bot, summoner['id'], top=False)
+
+    # Get last match or current match information
+    match = get_current_match_wrapper(watcher, summoner['id'])
+    currently_playing = bool(match)
+    if not currently_playing: # Get most recent match
+        match_list = get_match_list_wrapper(watcher, summoner['id'])
+        recent_match = get_recent_match(match_list, no_team=True)
+        match = get_match_wrapper(watcher, recent_match)
+
+    # If a suitable match was found, get the information
+    if match:
+        return get_match_table(static, match, mastery, summoner['id'],
+                finished=(not currently_playing), verbose=verbose)
+    else:
+        return "A most recent match was not found..."
+
+def get_summoner_information(bot, static, watcher, name, verbose=False):
     '''
     Returns a nicely formatted string of information about the given summoner.
     '''
-    static = bot.data['discrank.py'] # Static data
     summoner = get_summoner_wrapper(watcher, name)
-    mastery = get_mastery_wrapper(
-            bot, summoner['id'], top=False)
+    mastery = get_mastery_wrapper(bot, summoner['id'], top=False)
     response = ("***`{0[name]}`***\n"
         "**Summoner ID:** {0[id]}\n"
         "**Level:** {0[summonerLevel]}\n"
@@ -354,7 +502,7 @@ def get_summoner_information(bot, watcher, name, verbose=False):
             response += "***`{} Match`***\n".format(
                     'Current' if currently_playing else 'Last')
             response += get_match_table(static, match, mastery, summoner['id'],
-                    finished=(not currently_playing), verbose=verbose)
+                    finished=(not currently_playing), verbose=False)
         else:
             response += "A most recent match was not found..."
     else:
@@ -372,12 +520,15 @@ async def get_response(bot, message, parsed_command, direct):
 
     if base == 'blitz':
 
-        watcher = bot.data['discrank.py'][0]
+        static = bot.data['discrank.py'] # Static data and the watcher
         if plan_index == 0: # Get basic summoner information
-            response = get_summoner_information(bot, watcher,
+            response = get_summoner_information(bot, static, static[0],
                     options['summoner'], verbose=('extra' in options))
         elif plan_index == 1: # Get match information
-            response = "What"
+            response = get_match_table_wrapper(bot, static, static[0],
+                    options['match'], verbose=(not 'basic' in options))
+        else:
+            response = "Not done yet, sorry!"
 
     return (response, tts, message_type, extra)
 
