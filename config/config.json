@@ -3,5 +3,5 @@
     "token": "",
     "send_typing": true,
     "mention_mode": false,
-    "command_invokers": ["=", "]", "/"]
+    "command_invokers": ["!", ".", "=", "]", "/"]
 }
