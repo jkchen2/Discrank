@@ -4,11 +4,13 @@ import os.path
 import urllib.request
 import random
 
+from jshbot import servers
 
 from jshbot.exceptions import ErrorTypes, BotException
 
 __version__ = '0.1.0'
 EXCEPTION = 'Simple bot manager'
+uses_configuration = False
 
 def get_commands():
     commands = {}
@@ -60,6 +62,10 @@ async def get_response(bot, message, parsed_command, direct):
     message_type = 0
     extra = None
     base, plan_index, options, arguments = parsed_command
+
+    if not servers.is_owner(bot, message.author.id):
+        raise BotException(ErrorTypes.RECOVERABLE, EXCEPTION,
+                "You must be a bot owner for these commands.")
 
     if plan_index == 0: # Change avatar, status, or both
 
