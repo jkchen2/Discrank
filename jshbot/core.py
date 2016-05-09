@@ -18,7 +18,7 @@ class Bot(discord.Client):
     
     def __init__(self, debug):
         self.version = '0.3.0-alpha'
-        self.date = 'May 7th, 2016'
+        self.date = 'May 9th, 2016'
         self.time = int(time.time())
         self.readable_time = time.strftime('%c')
         self.debug = debug
@@ -146,8 +146,9 @@ class Bot(discord.Client):
         except Exception as e: # General error
             logging.error(e)
             traceback.print_exc()
-            response = ('Uh oh. The bot encountered an exception: ' + 
-                    str(type(e).__name__) + ': ' + str(e), False, 0, None)
+            error = 'Uh oh. The bot encountered an exception: {0}: {1}'.format(
+                    type(e).__name__, e)
+            response = (error, False, 0, None)
 
         message_reference = await self.send_message(
                 message.channel, response[0], tts=response[1])

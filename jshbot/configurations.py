@@ -23,7 +23,8 @@ def get_configurations(bot):
             with open(directory + plugin + '.json', 'r') as config_file:
                 configurations_list[plugin] = json.load(config_file)
         except FileNotFoundError:
-            if bot.plugins[plugin][0].uses_configuration:
+            if (getattr(bot.plugins[plugin][0] ,'uses_configuration', False) and 
+                    bot.plugins[plugin][0].uses_configuration):
                 raise BotException(ErrorTypes.STARTUP, EXCEPTION,
                         "Plugin " + plugin + " requires a configuration file, "
                         "but it was not found.")

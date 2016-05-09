@@ -2,6 +2,8 @@ import discord
 import logging
 import sys
 
+#import traceback
+
 from enum import Enum
 
 # Rudimentary enumerated error types
@@ -23,7 +25,8 @@ class BotException(Exception):
                 details = self.error_details,
                 others = other_details)
         if e:
-            self.error_message += '\nGiven error:\n{}'.format(str(e))
+            self.error_message += '\nGiven error:\n{0}: {1}'.format(
+                    type(e).__name__, e)
 
         logging.error(self.error_message)
 
