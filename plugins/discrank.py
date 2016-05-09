@@ -180,7 +180,6 @@ def get_mastery_wrapper(bot, summoner_id, top=True, champion_id=None):
         'player/{player}/{top}champion{champion}?api_key={key}').format(
             region1=region1, region2=region2, player=summoner_id, 
             top=('top' if top else ''), champion=champion, key=api_key)
-    print(url)
     r = requests.get(url)
     try:
         result = r.json()
