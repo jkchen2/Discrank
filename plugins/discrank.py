@@ -45,8 +45,9 @@ def get_commands():
     manual['blitz'] = {
         'description': 'Get League of Legends information from the API.',
         'usage': [
-            ('-info <summoner> (-extra)', 'Gets the information of the given '
-            'summoner. Extra information provides a more verbose result.'),
+            ('-summoner <summoner> (-extra)', 'Gets the information of the '
+                'given summoner. Extra information provides a more verbose '
+                'result.'),
             ('-match <summoner> (-basic)', 'Gets the current or most '
                 'recent ranked match data.'),
             ('-mastery <summoner> (-champion <champion>)', 'Gets the mastery '
@@ -101,7 +102,7 @@ def get_league_wrapper(watcher, summoner_id):
     except LoLException as e:
         if e == error_429:
             api_cooldown()
-        else: # Summoner has not played ranked
+        else:
             logging.warn("Summoner has not played ranked.")
             return {}
     except Exception as e:
@@ -730,7 +731,7 @@ async def get_response(bot, message, parsed_command, direct):
             response = get_match_table_wrapper(bot, static, static[0],
                     options['match'], verbose=(not 'basic' in options))
         elif plan_index == 2: # Get mastery table
-            champion = options['champion'] if 'champion' in options else ''
+            champion = options['champion'] if 'champion' in options else None
             response = get_mastery_table(bot, static, static[0],
                     options['mastery'], champion=champion)
         elif plan_index == 3: # Challenge
