@@ -13,10 +13,27 @@ Who doesn't like free things that usually cost money? The -chests flag gathers a
 A side feature is the !challenge command. This command utilizes mastery data and ranked data and puts two players' stats against one another. 
 
 Here are some examples of the commands in action
+
 http://puu.sh/oLsLj/886d133dec.png
+
 http://puu.sh/oLsN5/290ac70d96.png
+
 http://puu.sh/oLsP6/e41b6e95f3.png 
+
 http://puu.sh/oLsSY/5a90364c19.png
+
 http://puu.sh/oLsU0/70f04b5fe9.png
+
 http://puu.sh/oLt40/0077e8c403.png
+
 http://puu.sh/oLtNY/b4108a6767.png
+
+
+
+
+
+Joshua K. Chen
+Brian Yang
+University of Illinois at Urbana-Champaign
+
+
