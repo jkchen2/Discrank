@@ -32,7 +32,7 @@ public class challenge {
 		 * 
 		 */
 
-		while(champion1_masteryLevel > 0 && champion2_masteryLevel > 0 && champion1_gamesPlayed > 0 && champion2_gamesPlayed > 0) {
+		if(champion1_masteryLevel > 0 && champion2_masteryLevel > 0 && champion1_gamesPlayed > 0 && champion2_gamesPlayed > 0) {
 
 			double score1 = (champion1_masteryLevel * Math.log1p(champion1_gamesPlayed) * Math.log1p(champion1_masteryPoint));
 			double score2 = (champion2_masteryLevel * Math.log1p(champion2_gamesPlayed) * Math.log1p(champion2_masteryPoint));
@@ -57,9 +57,10 @@ public class challenge {
 				System.out.println("The chances of this happening is almost non-existant, how did you two even tie? Settle this in an actual game.");
 			}
 			
-			break;
+			
 		}
 
+		// We found a different solution to this. Read the other code for more detail. Have fun.
 		if(champion1_masteryPoint == 0 || champion1_gamesPlayed == 0)
 			System.out.println(summoner2 + " wins by default. " + summoner1 + " has no games played on this champion since the start of the mastery point system.");
 		if(champion2_masteryPoint == 0 || champion2_gamesPlayed == 0)
