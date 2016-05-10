@@ -11,7 +11,7 @@ def get_argument_block(split, index, get_all=False):
     if not split[index] or split[index][0] == ' ': # Unstripped, skip
         return get_argument_block(split, index + 1)
     elif not get_all and split[index][0] == '-': # This is an option
-        return (None, index - 1)
+        return (None, index - 1) if get_all else None
     elif split[index][0] == '"': # Loop until quote closed
         combined = ''
         for it in range(index, len(split) - 1):
