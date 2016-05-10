@@ -81,11 +81,24 @@ class Bot(discord.Client):
         server/channel/user is not muted or blocked. Admins/moderators override.
         If the message is a direct message, respond if there is a valid invoker.
         '''
-        if (not message.content or 
-                message.content[0] not in 
-                    self.configurations['core']['command_invokers'] or
-                message.author.bot or message.author.id == self.user.id):
+
+        # Ignore empty messages and messages by bots
+        if (not message.content or message.author.bot or 
+                message.author.id == self.user.id):
             return False
+
+        # Bot responds to mentions only
+        if self.configurations['core']['mention_mode']:
+            if (not message.content.startswith(self.user.mention) or
+                    len(message.content.split(' ', 1)) == 1):
+                return False
+
+        # Any command invoker will do
+        else:
+            if (message.content[0] not in 
+                    self.configurations['core']['command_invokers'] and
+                    not message.content.startswith(self.user.mention)):
+                return False
 
         # Respond to direct messages
         if message.channel.is_private:
@@ -121,7 +134,10 @@ class Bot(discord.Client):
             return
 
         # Ensure command is valid
-        split_content = message.content[1:].split(' ', 1)
+        if message.content.startswith(self.user.mention):
+            split_content = message.content.split(' ', 2)[1:]
+        else:
+            split_content = message.content[1:].split(' ', 1)
         if len(split_content) == 1: # No spaces
             split_content.append('')
         base, parameters = split_content
@@ -222,9 +238,6 @@ class Bot(discord.Client):
         plugins.broadcast_event(self, 22, server, user)
     async def on_typing(self, channel, user, when):
         plugins.broadcast_event(self, 23, channel, user, when)
-
-
-    # TODO: Add other plugin broadcast events
 
     def save_data(self):
         '''
