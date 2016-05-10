@@ -35,6 +35,8 @@ then, not to a great extent) are Java, MySQL, and HTML.
 
 
 
+
+
 Josh wrote the core functions of the chat bot from the ground up. We had little 
 
 time before finals so he committed (pun intended, Phreak this is for you) multiple
@@ -50,6 +52,8 @@ so hopefully this also shines some light on them. His inspiration? Well, his
 inspiration is literally computer science. Ask him to code you a piece of software
 
 that allows for space-time travel and he will do it. 
+
+
 
 
 I worked on figuring out what the main features/functions of the bot would be. The
@@ -68,6 +72,8 @@ glad that everything came into fruition.
 
 
 
+
+
 In the future, after finals are over, we plan on adding extra features and getting 
 
 more complex with the information you can pull from the bot. As of now, we targetted 
@@ -83,6 +89,8 @@ very competitive player, and I know a lot about the game -- this is what I can
 really bring to the table) we can create tools that are far better and more complex 
 
 than any other tool out there.
+
+
 
 
 
