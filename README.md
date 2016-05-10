@@ -39,6 +39,11 @@ Discrank isn't endorsed by Riot Games and doesn't reflect the views or opinions 
 
 --------------------------------------------------
 
+###Installation Instructions
+
+https://github.com/jkchen2/riotapichallenge2k16/wiki
+
+--------------------------------------------------
 
 Joshua K. Chen
 
