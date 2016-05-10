@@ -415,7 +415,7 @@ def get_match_table(static, match, mastery, summoner_id, finished=True,
                     stats = member['stats']
                     kills, deaths = stats['kills'], stats['deaths']
                     assists = stats['assists']
-                    value = "({0:.1f})".format(((kills + deaths) / 
+                    value = "({0:.1f})".format(((kills + assists) / 
                             (1 if deaths == 0 else deaths)))
                     kda = "{0[kills]}/{0[deaths]}/{0[assists]} {1}".format(
                             stats, value)
@@ -565,31 +565,6 @@ def get_summoner_information(bot, static, watcher, name, verbose=False):
         response += "A most recent match was not found...\n"
 
     return response
-
-def get_formatted_rank(watcher, summoner_id):
-    '''
-    Returns a small formatted string with the given summoner's rank.
-    If the rank cannot be obtained because the API is being limited, '---' will 
-    be returned. Otherwise, nothing will be returned. 
-    '''
-    try:
-        league = watcher.get_league_entry(summoner_ids=[summoner_id])
-        league = league[str(summoner_id)]
-    except LoLException as e:
-        if e == error_429: # API limited
-            return '---'
-        else:
-            return '' # No ranked stats found
-    divisions = {
-        "V": "5",
-        "IV": "4",
-        "III": "3",
-        "II": "2",
-        "I": "1"
-    }
-    tier = league['tier'][0]
-    division = divisions[league['tier']['divison']]
-    return '({0}{1})'.format(tier, division)
 
 def get_formatted_mastery_data(static, champion_data):
     '''
