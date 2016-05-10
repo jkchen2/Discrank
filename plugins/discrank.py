@@ -353,14 +353,15 @@ def get_match_table(static, match, mastery, summoner_id, finished=True,
             winning_team = 100 if participant['teamId'] == 200 else 100
 
         # Add current game time
-        response += "{2}Game Time: {0}:{1}\n\n".format(minutes, seconds,
+        response += "{2}Game Time: {0}:{1}\n".format(minutes, seconds,
                 '' if finished else 'Current ')
+        # Game type
+        response += 'Game Type: {}\n\n'.format(game)
 
         # Loop through each team
         for team in (100, 200):
             
-            # Game type
-            response += 'Game Type: {}\n'.format(game)
+            # Team
             response += '{} Team'.format(
                     'Blue' if team == 100 else 'Red')
 
