@@ -38,6 +38,8 @@ Discrank isn't endorsed by Riot Games and doesn't reflect the views or opinions 
 
 --------------------------------------------------
 
+#Disclaimer
+
 ###Installation Instructions
 
 https://github.com/jkchen2/Discrank/wiki/How-To-Install
