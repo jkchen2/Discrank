@@ -1,6 +1,5 @@
-# riotapichallenge2k16
-
-Discrank, when Blitzcrank puts the crank in Discord. 
+# Discrank
+###when Blitzcrank puts the crank in Discord. 
 
 Our project is a Discord chat bot that utilizes Riot's API to provide information about other summoners through Discord. The bot can retrieve basic summoner information as well as detailed information about current games and recent games. The bot sorts through and formats data in a pleasant fashion that makes it easy and practical to use Discord to extract information. 
 
@@ -39,6 +38,13 @@ Discrank isn't endorsed by Riot Games and doesn't reflect the views or opinions 
 
 --------------------------------------------------
 
+#Disclaimer
+
+###Installation Instructions
+
+https://github.com/jkchen2/Discrank/wiki/How-To-Install
+
+--------------------------------------------------
 
 Joshua K. Chen
 

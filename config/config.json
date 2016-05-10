@@ -1,6 +1,6 @@
 {
-    "owners": ["98335658795347968", "101567516408578048"],
-    "token": "",
+    "owners": ["Your Discord user ID here"],
+    "token": "Your Discord API bot token here",
     "send_typing": true,
     "mention_mode": false,
     "command_invokers": ["!", ".", "=", "]", "/"]
