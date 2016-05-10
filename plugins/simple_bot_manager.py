@@ -63,6 +63,8 @@ async def get_response(bot, message, parsed_command, direct):
     extra = None
     base, plan_index, options, arguments = parsed_command
 
+    response = "Bot stuff updated!"
+
     if not servers.is_owner(bot, message.author.id):
         raise BotException(ErrorTypes.RECOVERABLE, EXCEPTION,
                 "You must be a bot owner for these commands.")
@@ -90,12 +92,15 @@ async def get_response(bot, message, parsed_command, direct):
                         "Failed to update the status.", e=e)
 
     elif plan_index == 1: # Change nickname
-        try:
-            await bot.change_nickname(
-                    message.server.me, arguments if arguments else None)
-        except Exception as e:
-            raise BotException(ErrorTypes.RECOVERABLE, EXCEPTION,
-                    "Failed to change the nickname.", e=e)
+        if not message.channel.is_private:
+            try:
+                await bot.change_nickname(
+                        message.server.me, arguments if arguments else None)
+            except Exception as e:
+                raise BotException(ErrorTypes.RECOVERABLE, EXCEPTION,
+                        "Failed to change the nickname.", e=e)
+        else:
+            response = "Cannot change nickname in a direct message."
     elif plan_index == 2: # Change name
         if len(arguments) > 20:
             raise BotException(ErrorTypes.RECOVERABLE, EXCEPTION,
@@ -114,13 +119,14 @@ async def get_response(bot, message, parsed_command, direct):
                     "Failed to update the status.", e=e)
     elif plan_index == 4: # Change avatar
         try:
-            avatar_bytes = urllib.request.urlopen(arguments).read()
+            if arguments:
+                avatar_bytes = urllib.request.urlopen(arguments).read()
+            else:
+                avatar_bytes = None
             await bot.edit_profile(bot.get_token(), avatar=avatar_bytes)
         except Exception as e:
             raise BotException(ErrorTypes.RECOVERABLE, EXCEPTION,
                     "Failed to update the avatar.", e=e)
-    
-    response = "Bot stuff updated!"
 
     return (response, tts, message_type, extra)
 

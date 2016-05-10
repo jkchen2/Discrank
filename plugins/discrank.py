@@ -13,7 +13,7 @@ from riotwatcher import LoLException, error_429
 
 from jshbot.exceptions import ErrorTypes, BotException
 
-__version__ = '0.1.2'
+__version__ = '0.1.3'
 EXCEPTION = 'Riot API plugin'
 uses_configuration = True
 
@@ -91,14 +91,17 @@ def get_summoner_wrapper(watcher, name):
                 "Failed to retrieve summoner information.", e=e)
     return summoner
 
-def get_league_wrapper(watcher, summoner_id):
+def get_league_wrapper(watcher, summoner_ids):
     '''
     Wraps the obtaining of a league with exception handling. Returns an empty
     dictionary if the summoner has not played any ranked games.
     '''
     try:
-        league = watcher.get_league_entry(summoner_ids=[summoner_id])
-        return league[str(summoner_id)][0]
+        if type(summoner_ids) is list:
+            return watcher.get_league_entry(summoner_ids=summoner_ids)
+        else:
+            league = watcher.get_league_entry(summoner_ids=[summoner_ids])
+            return league[str(summoner_ids)][0]
     except LoLException as e:
         if e == error_429:
             api_cooldown()
@@ -243,7 +246,7 @@ def get_participant(match, summoner_id, finished):
 def get_champion_kda(watcher, summoner_id, champion_id):
     '''
     Returns a string of the given summoner's KDA of the given champion. If the
-    stats cannot be retrieved, return 'n/a', or 'API Limit' if the API is
+    stats cannot be retrieved, return '0/0/0 (0)', or 'API Limit' if the API is
     being rate limited.
     '''
     try:
@@ -251,16 +254,14 @@ def get_champion_kda(watcher, summoner_id, champion_id):
     except LoLException as e:
         if e == error_429:
             return 'API Limit'
-        else:
-            print(type(e).__name__)
-            print(e)
-            return 'n/a (error)'
+        else: # Champion data not found
+            return '0/0/0 (0)'
     for champion in stats['champions']:
         if champion['id'] == champion_id:
             break
     sessions = champion['stats']['totalSessionsPlayed']
     if sessions == 0:
-        return 'n/a (no games)'
+        return '0/0/0 (0)'
     kills = champion['stats']['totalChampionKills'] / sessions
     deaths = champion['stats']['totalDeathsPerSession'] / sessions
     assists = champion['stats']['totalAssists'] / sessions
@@ -304,6 +305,15 @@ def get_match_table(static, match, mastery, summoner_id, finished=True,
     whether or not the match is finished.
     '''
 
+    # For rank stuff later
+    divisions = {
+        "V": "5",
+        "IV": "4",
+        "III": "3",
+        "II": "2",
+        "I": "1"
+    }
+
     participant = get_participant(match, summoner_id, finished)
     response = ''
 
@@ -322,6 +332,16 @@ def get_match_table(static, match, mastery, summoner_id, finished=True,
     seconds = "{0:02d}".format(total_length % 60)
     game = static[3][queue_id]
 
+    # Get ranking for each player
+    summoners = []
+    for index, member in enumerate(match['participants']):
+        if finished:
+            summoner = match['participantIdentities'][index]
+            summoners.append(summoner['player']['summonerId'])
+        else:
+            summoners.append(member['summonerId'])
+    league_data = get_league_wrapper(static[0], summoners)
+
     # Very detailed table
     if verbose:
         response = '```diff\n' # Use + and - to highlight
@@ -333,7 +353,7 @@ def get_match_table(static, match, mastery, summoner_id, finished=True,
             winning_team = 100 if participant['teamId'] == 200 else 100
 
         # Add current game time
-        response += "{2}Game Time: {0}:{1}\n".format(minutes, seconds,
+        response += "{2}Game Time: {0}:{1}\n\n".format(minutes, seconds,
                 '' if finished else 'Current ')
 
         # Loop through each team
@@ -360,9 +380,9 @@ def get_match_table(static, match, mastery, summoner_id, finished=True,
                 response += '\n'
 
             # Loop through each participant on the team
-            response += ('  Summoner         | Champion     | '
+            response += ('  Summoner         Rank | Champion     | '
                     'KDA                   | Spell 1  | Spell 2  |\n'
-                    '-------------------|--------------|-'
+                    '------------------------|--------------|-'
                     '----------------------|----------|----------|\n')
             for index, member in enumerate(match['participants']):
                 if member['teamId'] != team: # Continue
@@ -370,11 +390,20 @@ def get_match_table(static, match, mastery, summoner_id, finished=True,
                 
                 # Get summoner name
                 if finished:
-                    #index = member['participantId'] - 1
                     summoner = match['participantIdentities'][index]
                     summoner_name = summoner['player']['summonerName']
+                    summoner_id = str(summoner['player']['summonerId'])
                 else:
                     summoner_name = member['summonerName']
+                    summoner_id = str(member['summonerId'])
+
+                # Get summoner rank
+                if summoner_id in league_data:
+                    league = league_data[summoner_id][0]
+                    rank = '({0}{1})'.format(league['tier'][0],
+                            divisions[league['entries'][0]['division']])
+                else:
+                    rank = ''
 
                 # Get champion name and spell names
                 champion = static[1][str(member['championId'])]['name']
@@ -401,7 +430,8 @@ def get_match_table(static, match, mastery, summoner_id, finished=True,
                     response += '  '
 
                 # Add champion name, kda, and spells
-                response += ('{}'.format(summoner_name)).ljust(17) + '| '
+                response += ('{}'.format(summoner_name)).ljust(17)
+                response += ('{}'.format(rank)).rjust(4) + ' | '
                 response += ('{}'.format(champion)).ljust(13) + '| '
                 response += ('{}'.format(kda)).ljust(22) + '| '
                 response += ('{}'.format(spell1)).ljust(9) + '| '
@@ -535,6 +565,31 @@ def get_summoner_information(bot, static, watcher, name, verbose=False):
         response += "A most recent match was not found...\n"
 
     return response
+
+def get_formatted_rank(watcher, summoner_id):
+    '''
+    Returns a small formatted string with the given summoner's rank.
+    If the rank cannot be obtained because the API is being limited, '---' will 
+    be returned. Otherwise, nothing will be returned. 
+    '''
+    try:
+        league = watcher.get_league_entry(summoner_ids=[summoner_id])
+        league = league[str(summoner_id)]
+    except LoLException as e:
+        if e == error_429: # API limited
+            return '---'
+        else:
+            return '' # No ranked stats found
+    divisions = {
+        "V": "5",
+        "IV": "4",
+        "III": "3",
+        "II": "2",
+        "I": "1"
+    }
+    tier = league['tier'][0]
+    division = divisions[league['tier']['divison']]
+    return '({0}{1})'.format(tier, division)
 
 def get_formatted_mastery_data(static, champion_data):
     '''
