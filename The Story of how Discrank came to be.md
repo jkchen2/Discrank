@@ -34,6 +34,11 @@ stages of learning Python. The only coding languages I really know (and even
 then, not to a great extent) are Java, MySQL, and HTML. 
 
 
+ 
+  
+  
+
+
 
 Josh wrote the core functions of the chat bot from the ground up. We had little 
 
@@ -52,6 +57,11 @@ inspiration is literally computer science. Ask him to code you a piece of softwa
 that allows for space-time travel and he will do it. 
 
 
+ 
+  
+   
+   
+
 I worked on figuring out what the main features/functions of the bot would be. The
 
 mastery point system is relatively new, so it was hard thinking of something that
@@ -65,6 +75,12 @@ Riot's API while chatting with their fellow gamers. I did my best of explaining 
 ideas to someone who has never played League of Legends before, and I am extremely
 
 glad that everything came into fruition. 
+
+ 
+  
+   
+   
+   
 
 
 
@@ -83,6 +99,8 @@ very competitive player, and I know a lot about the game -- this is what I can
 really bring to the table) we can create tools that are far better and more complex 
 
 than any other tool out there.
+
+
 
 
 
